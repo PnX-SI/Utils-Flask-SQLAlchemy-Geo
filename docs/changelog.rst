@@ -7,5 +7,6 @@ Première version de la librairie
 * serializer : geoserialization
 * decorateur :décorateur de classe permettant de geoserialiser des modèles SQLAlchemy en geofeature via la méthode `as_geofeature`
 * GenericQueryGeo : complète les GenericQuery de Utils-Flask-SQLAlchemyGeo en permettant de gérer les géométries
-
+* Méthode from_geofeature
+* le decorateur geoserializable ajoutes les methode du decorateur serializable 
 
