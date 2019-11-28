@@ -1,8 +1,10 @@
-from geoalchemy2.shape import to_shape
+from geoalchemy2.shape import to_shape, from_shape
 from geojson import Feature, FeatureCollection
-from utils_flask_sqla.serializers import serializable
 from shapely.geometry import asShape
-from geoalchemy2.shape import from_shape
+
+from utils_flask_sqla.serializers import serializable
+from utils_flask_sqla.errors import GeonatureApiError
+
 from geonature.utils.utilsgeometry import remove_third_dimension
 
 def geoserializable(cls):
