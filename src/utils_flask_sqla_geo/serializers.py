@@ -1,6 +1,7 @@
 from geoalchemy2.shape import to_shape
 from geojson import Feature, FeatureCollection
 from utils_flask_sqla.serializers import serializable
+from utils_flask_sqla.errors import GeonatureApiError
 from shapely.geometry import asShape
 from geoalchemy2.shape import from_shape
 from geonature.utils.utilsgeometry import remove_third_dimension
@@ -46,6 +47,7 @@ def geoserializable(cls):
             properties=self.as_dict(recursif, columns, relationships),
         )
         return feature
+
 
     def populategeofn(self, geojson, col_geom_name="geom"):
         '''
