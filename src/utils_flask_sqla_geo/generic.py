@@ -16,9 +16,9 @@ class GenericTableGeo(GenericTable):
             gère les géométries
     """
 
-    def __init__(self, tableName, schemaName, geometry_field=None, srid=None):
+    def __init__(self, tableName, schemaName, engine, geometry_field=None, srid=None):
 
-        super().__init__(tableName, schemaName)
+        super().__init__(tableName, schemaName, engine)
         
         if geometry_field:
             try:
@@ -76,21 +76,21 @@ class GenericQueryGeo(GenericQuery):
 
     def __init__(
         self,
-        db_session,
+        DB,
         tableName,
         schemaName,
-        filters,
+        filters=[],
         limit=100,
         offset=0,
         geometry_field=None,
         srid=None
     ):
 
-        super().__init__(db_session, tableName, schemaName, filters, limit, offset)
+        super().__init__(DB, tableName, schemaName, filters, limit, offset)
 
         self.geometry_field = geometry_field
 
-        self.view = GenericTableGeo(tableName, schemaName, geometry_field=geometry_field, srid=srid)
+        self.view = GenericTableGeo(tableName, schemaName, DB.engine, geometry_field=geometry_field, srid=srid)
 
     def as_geofeature(self):
 
@@ -114,4 +114,5 @@ class GenericQueryGeo(GenericQuery):
             "limit": self.limit,
             "items": results,
         }
-
+    
+    return_query = as_geofeature
