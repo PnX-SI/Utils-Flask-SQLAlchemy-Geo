@@ -1,7 +1,6 @@
 from geoalchemy2.shape import to_shape, from_shape
 from geojson import Feature, FeatureCollection
 from utils_flask_sqla.serializers import serializable
-from utils_flask_sqla.errors import GeonatureApiError
 from shapely.geometry import asShape
 
 from utils_flask_sqla.serializers import serializable
@@ -66,7 +65,7 @@ def geoserializable(cls):
         geometry = geojson.get('geometry')
 
         if not properties or not geometry or typeg != "Feature":
-            raise GeonatureApiError(
+            raise UtilsSqlaError(
                 "Input must be a geofeature"
             )
 

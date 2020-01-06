@@ -11,7 +11,7 @@ from fiona.crs import from_epsg
 from geoalchemy2.shape import to_shape
 from shapely.geometry import *
 
-from utils_flask_sqla.errors import GeonatureApiError
+from utils_flask_sqla.errors import UtilsSqlaError
 
 # Creation des shapefiles avec la librairies fiona
 
@@ -137,12 +137,12 @@ class FionaShapeService:
             cls.write_a_feature(feature, geom_wkt)
         except AssertionError:
             cls.close_files()
-            raise GeonatureApiError(
+            raise UtilsSqlaError(
                 "Cannot create a shapefile record whithout a Geometry"
             )
         except Exception as e:
             cls.close_files()
-            raise GeonatureApiError(e)
+            raise UtilsSqlaError(e)
 
     @classmethod
     def create_features_generic(cls, view, data, geom_col, geojson_col=None):
