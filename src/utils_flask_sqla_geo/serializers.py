@@ -5,7 +5,7 @@ from utils_flask_sqla.errors import GeonatureApiError
 from shapely.geometry import asShape
 
 from utils_flask_sqla.serializers import serializable
-from utils_flask_sqla.errors import GeonatureApiError
+from utils_flask_sqla.errors import UtilsSqlaError
 
 from geonature.utils.utilsgeometry import remove_third_dimension
 
