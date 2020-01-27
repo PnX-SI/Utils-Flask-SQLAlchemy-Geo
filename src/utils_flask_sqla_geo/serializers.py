@@ -20,7 +20,7 @@ def geoserializable(cls):
     cls = serializable(cls)
 
     def serializegeofn(
-        self, geoCol, idCol, recursif=False, columns=(), relationships=()
+        self, geoCol, idCol, recursif=False, columns=(), relationships=(), depth=None
     ):
         """
         Méthode qui renvoie les données de l'objet sous la forme
@@ -38,6 +38,7 @@ def geoserializable(cls):
            columns: liste
             liste des columns qui doivent être prisent en compte
         """
+
         if not getattr(self, geoCol) is None:
             geometry = to_shape(getattr(self, geoCol))
         else:
@@ -46,7 +47,7 @@ def geoserializable(cls):
         feature = Feature(
             id=str(getattr(self, idCol)),
             geometry=geometry,
-            properties=self.as_dict(recursif, columns, relationships),
+            properties=self.as_dict(recursif, depth=depth, columns=columns, relationships=relationships),
         )
         return feature
 
