@@ -1,3 +1,5 @@
+import datetime
+
 from geoalchemy2.shape import to_shape, from_shape
 from geojson import Feature, FeatureCollection
 from utils_flask_sqla.serializers import serializable
@@ -6,7 +8,8 @@ from shapely.geometry import asShape
 from utils_flask_sqla.serializers import serializable
 from utils_flask_sqla.errors import UtilsSqlaError
 
-from geonature.utils.utilsgeometry import remove_third_dimension
+from .utilsgeometry import FionaShapeService, remove_third_dimension
+
 
 def geoserializable(cls):
     """
@@ -47,10 +50,10 @@ def geoserializable(cls):
         feature = Feature(
             id=str(getattr(self, idCol)),
             geometry=geometry,
-            properties=self.as_dict(recursif, depth=depth, columns=columns, relationships=relationships),
+            properties=self.as_dict(
+                recursif, depth=depth, columns=columns, relationships=relationships),
         )
         return feature
-
 
     def populategeofn(self, geojson, col_geom_name="geom"):
         '''
@@ -79,8 +82,59 @@ def geoserializable(cls):
         geom = from_shape(two_dimension_geom, srid=4326)
         setattr(self, col_geom_name, geom)
 
-
     cls.as_geofeature = serializegeofn
     cls.from_geofeature = populategeofn
 
+    return cls
+
+
+def shapeserializable(cls):
+    @classmethod
+    def to_shape_fn(
+        cls,
+        geom_col=None,
+        geojson_col=None,
+        srid=None,
+        data=None,
+        dir_path=None,
+        file_name=None,
+        columns=None,
+    ):
+        """
+        Class method to create 3 shapes from datas
+        Parameters
+
+        geom_col (string): name of the geometry column 
+        geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                            for performance reason its better to use geojson_col rather than geom_col
+        data (list): list of datas 
+        file_name (string): 
+        columns (list): columns to be serialize
+
+        Returns:
+            void
+        """
+        if not data:
+            data = []
+
+        file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
+
+        if columns:
+            db_cols = [
+                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+            ]
+        else:
+            db_cols = cls.__mapper__.c
+
+        FionaShapeService.create_shapes_struct(
+            db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
+        )
+        for d in data:
+            d = d.as_dict(columns)
+            geom = getattr(d, geom_col)
+            FionaShapeService.create_feature(d, geom)
+
+        FionaShapeService.save_and_zip_shapefiles()
+
+    cls.as_shape = to_shape_fn
     return cls

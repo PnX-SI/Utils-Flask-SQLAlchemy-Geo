@@ -1,4 +1,5 @@
-import datetime, ast
+import datetime
+import ast
 
 from collections import OrderedDict
 
@@ -90,9 +91,11 @@ class FionaShapeService:
                     )
                     cls.columns.append(db_col.key)
 
-        cls.polygon_schema = {"geometry": "MultiPolygon", "properties": shp_properties}
+        cls.polygon_schema = {"geometry": "MultiPolygon",
+                              "properties": shp_properties}
         cls.point_schema = {"geometry": "Point", "properties": shp_properties}
-        cls.polyline_schema = {"geometry": "LineString", "properties": shp_properties}
+        cls.polyline_schema = {"geometry": "LineString",
+                               "properties": shp_properties}
 
         cls.file_point = cls.dir_path + "/POINT_" + cls.file_name
         cls.file_poly = cls.dir_path + "/POLYGON_" + cls.file_name
@@ -114,7 +117,6 @@ class FionaShapeService:
             cls.polyline_schema,
             crs=cls.source_crs,
         )
-        
 
     @classmethod
     def create_feature(cls, data, geom):
@@ -255,60 +257,9 @@ def create_shapes_generic(
     view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
 ):
     FionaShapeService.create_shapes_struct(db_cols, srid, dir_path, file_name)
-    FionaShapeService.create_features_generic(view, data, geom_col, geojson_col)
+    FionaShapeService.create_features_generic(
+        view, data, geom_col, geojson_col)
     FionaShapeService.save_and_zip_shapefiles()
-
-
-def shapeserializable(cls):
-    @classmethod
-    def to_shape_fn(
-        cls,
-        geom_col=None,
-        geojson_col=None,
-        srid=None,
-        data=None,
-        dir_path=None,
-        file_name=None,
-        columns=None,
-    ):
-        """
-        Class method to create 3 shapes from datas
-        Parameters
-
-        geom_col (string): name of the geometry column 
-        geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                            for performance reason its better to use geojson_col rather than geom_col
-        data (list): list of datas 
-        file_name (string): 
-        columns (list): columns to be serialize
-
-        Returns:
-            void
-        """
-        if not data:
-            data = []
-
-        file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
-
-        if columns:
-            db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
-            ]
-        else:
-            db_cols = cls.__mapper__.c
-
-        FionaShapeService.create_shapes_struct(
-            db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
-        )
-        for d in data:
-            d = d.as_dict(columns)
-            geom = getattr(d, geom_col)
-            FionaShapeService.create_feature(d, geom)
-
-        FionaShapeService.save_and_zip_shapefiles()
-
-    cls.as_shape = to_shape_fn
-    return cls
 
 
 def circle_from_point(point, radius, nb_point=20):
@@ -331,9 +282,11 @@ def convert_to_2d(geojson):
     """
     # if its a Linestring, Polygon etc...
     if geojson["coordinates"][0] is list:
-        two_d_coordinates = [[coord[0], coord[1]] for coord in geojson["coordinates"]]
+        two_d_coordinates = [[coord[0], coord[1]]
+                             for coord in geojson["coordinates"]]
     else:
-        two_d_coordinates = [geojson["coordinates"][0], geojson["coordinates"][1]]
+        two_d_coordinates = [geojson["coordinates"]
+                             [0], geojson["coordinates"][1]]
 
     geojson["coordinates"] = two_d_coordinates
 
@@ -398,6 +351,6 @@ def remove_third_dimension(geom):
 
     else:
         raise RuntimeError(
-            "Currently this type of geometry is not supported: {}".format(type(geom))
+            "Currently this type of geometry is not supported: {}".format(
+                type(geom))
         )
-
