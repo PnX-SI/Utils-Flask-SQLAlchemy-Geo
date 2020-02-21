@@ -102,25 +102,25 @@ class GenericQueryGeo(GenericQuery):
         )
 
 
-def as_geofeature(self):
+    def as_geofeature(self):
 
-    data, nb_result_without_filter, nb_results = self.query()
+        data, nb_result_without_filter, nb_results = self.query()
 
-    if self.geometry_field:
-        results = FeatureCollection(
-            [
-                self.view.as_geofeature(d)
-                for d in data
-                if getattr(d, self.geometry_field) is not None
-            ]
-        )
-    else:
-        results = [self.view.as_dict(d) for d in data]
+        if self.geometry_field:
+            results = FeatureCollection(
+                [
+                    self.view.as_geofeature(d)
+                    for d in data
+                    if getattr(d, self.geometry_field) is not None
+                ]
+            )
+        else:
+            results = [self.view.as_dict(d) for d in data]
 
-    return {
-        "total": nb_result_without_filter,
-        "total_filtered": nb_results,
-        "page": self.offset,
-        "limit": self.limit,
-        "items": results,
-    }
+        return {
+            "total": nb_result_without_filter,
+            "total_filtered": nb_results,
+            "page": self.offset,
+            "limit": self.limit,
+            "items": results,
+        }
