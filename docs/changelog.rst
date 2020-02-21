@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+0.0.3 (unreleased)
+------------------
+
+**Corrections**
+
+* 
+
 0.0.2 (2020-02-21)
 ------------------
 
@@ -15,8 +22,8 @@ CHANGELOG
 Première version fonctionnelle de la librairie.
 
 * Complète la librairie Utils-Flask-SQLAlchemy
-* Décorateur : décorateur de classe permettant sérialiser en GeoJSON et de créer des shapefiles à partir de modèle SQLAlchemy
-* GenericQueryGeo : complète les GenericQuery de Utils-Flask-SQLAlchemyGeo en permettant de gérer les géométries
+* Décorateur : décorateur de classe permettant de sérialiser en GeoJSON et de créer des shapefiles à partir de modèles SQLAlchemy
+* GenericQueryGeo : complète les GenericQuery de Utils-Flask-SQLAlchemy en permettant de gérer les géométries
 * Méthode ``from_geofeature``
-* Le decorateur ``geoserializable`` ajoute les méthodes du décorateur serializable
-* Fonctions utilitaires pour manipuler des objets géographiques (``circle_from_point``, ``convert_to_2d``, `remove_third_dimension``... ), et classe utilitaire pour créer des shapfiles (RIP soon ?): ``FionaShapeService``
+* Le décorateur ``geoserializable`` ajoute les méthodes du décorateur serializable
+* Fonctions utilitaires pour manipuler des objets géographiques (``circle_from_point``, ``convert_to_2d``, ``remove_third_dimension``... ), et classe utilitaire pour créer des shapfiles (``FionaShapeService``)
