@@ -18,7 +18,6 @@ setuptools.setup(
     name='utils-flask-sqlalchemy-geo',
     version=get_version(),
     description="Python lib of tools for Flask and SQLAlchemy (extension geometry)",
-    long_description=open('README.md', encoding="utf-8").read().strip(),
     author="Les parcs nationaux de France",
     url='https://github.com/PnX-SI/Utils-Flask-SQLAlchemy-Geo',
     packages=setuptools.find_packages('src'),
