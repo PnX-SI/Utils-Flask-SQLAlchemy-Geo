@@ -90,8 +90,8 @@ class GenericTableGeo(GenericTable):
             Void (create a shapefile)
         """
         if export_format not in ("shp", "gpkg"):
-            raise Error("Unsupported format")
-        
+            raise Exception("Unsupported format")
+
         export_geodata_as_file(
             view=self,
             db_cols=db_cols,
@@ -133,7 +133,6 @@ class GenericQueryGeo(GenericQuery):
             geometry_field=geometry_field,
             srid=srid
         )
-
 
     def as_geofeature(self):
 

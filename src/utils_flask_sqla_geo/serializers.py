@@ -172,7 +172,7 @@ def geofileserializable(cls):
             void
         """
         if export_format not in ("shp", "gpkg"):
-            raise Error("Unsupported format")
+            raise Exception("Unsupported format")
 
 
         if not data:
