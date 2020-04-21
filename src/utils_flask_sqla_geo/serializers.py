@@ -8,7 +8,11 @@ from shapely.geometry import asShape
 from utils_flask_sqla.serializers import serializable
 from utils_flask_sqla.errors import UtilsSqlaError
 
-from .utilsgeometry import FionaShapeService, remove_third_dimension
+from .utilsgeometry import (
+    FionaShapeService, 
+    remove_third_dimension, 
+    FionaGpkgService
+)
 
 
 def geoserializable(cls):
@@ -137,4 +141,66 @@ def shapeserializable(cls):
         FionaShapeService.save_and_zip_shapefiles()
 
     cls.as_shape = to_shape_fn
+    return cls
+
+
+def geofileserializable(cls):
+    @classmethod
+    def to_geofile_fn(
+        cls,
+        export_format="shp",
+        geom_col=None,
+        geojson_col=None,
+        srid=None,
+        data=None,
+        dir_path=None,
+        file_name=None,
+        columns=None,
+    ):
+        """
+        Class method to create 3 shapes from datas
+        Parameters
+
+        geom_col (string): name of the geometry column 
+        geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                            for performance reason its better to use geojson_col rather than geom_col
+        data (list): list of datas 
+        file_name (string): 
+        columns (list): columns to be serialize
+
+        Returns:
+            void
+        """
+        if export_format not in ("shp", "gpkg"):
+            raise Error("Unsupported format")
+
+
+        if not data:
+            data = []
+
+        file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
+
+        if columns:
+            db_cols = [
+                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+            ]
+        else:
+            db_cols = cls.__mapper__.c
+
+        if export_format == 'shp':
+            fionaService = FionaShapeService
+        else:
+            fionaService = FionaGpkgService
+
+        fionaService.create_fiona_struct(
+            db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
+        )
+        for d in data:
+            d = d.as_dict(columns)
+            geom = getattr(d, geom_col)
+            fionaService.create_feature(d, geom)
+
+        fionaService.save_files()
+
+    cls.as_geofile = to_geofile_fn
     return cls

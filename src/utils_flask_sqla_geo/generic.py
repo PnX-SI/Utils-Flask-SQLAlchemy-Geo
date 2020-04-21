@@ -79,6 +79,7 @@ class GenericTableGeo(GenericTable):
         """
         Create shapefile or geopackage for generic table
         Parameters:
+            export_format (str): file format (shp or gpkg)
             db_cols (list): columns from a SQLA model (model.__mapper__.c)
             geojson_col (str): the geojson (from st_asgeojson()) column of the mapped table if exist
                             if None, take the geom_col (WKB) to generate geometry with shapely
@@ -88,7 +89,9 @@ class GenericTableGeo(GenericTable):
         Returns
             Void (create a shapefile)
         """
-
+        if export_format not in ("shp", "gpkg"):
+            raise Error("Unsupported format")
+        
         export_geodata_as_file(
             view=self,
             db_cols=db_cols,

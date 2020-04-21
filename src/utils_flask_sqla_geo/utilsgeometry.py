@@ -272,6 +272,7 @@ class FionaShapeService(FionaService):
             crs=cls.source_crs,
         )
 
+    # TODO mark as deprecated
     create_shapes_struct = create_fiona_struct
 
     @classmethod
@@ -361,7 +362,8 @@ class FionaShapeService(FionaService):
                     shape_format + "_" + cls.file_name + "." + ext,
                 )
         zp_file.close()
-
+    
+    # TODO mark as deprecated
     save_and_zip_shapefiles = save_files
 
     @classmethod
