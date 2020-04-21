@@ -34,19 +34,11 @@ FIONA_MAPPING = {
     "uuid": "str",
 }
 
-
-class FionaShapeService:
-    """
-    Service to create shapefiles from sqlalchemy models
-
-    How to use:
-    FionaShapeService.create_shapes_struct(**args)
-    FionaShapeService.create_features(**args)
-    FionaShapeService.save_and_zip_shapefiles()
-    """
+class FionaService:
+    supported_type = ("shp", "gpkg")
 
     @classmethod
-    def create_shapes_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
+    def create_fiona_properties(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
         """
         Create three shapefiles (point, line, polygon) with the attributes give by db_cols
         Parameters:
@@ -63,15 +55,14 @@ class FionaShapeService:
         cls.source_crs = from_epsg(srid)
         cls.dir_path = dir_path
         cls.file_name = file_name
-
         cls.columns = []
         # if we want to change to columns name of the SQLA class
         # in the export shapefiles structures
-        shp_properties = OrderedDict()
+        cls.shp_properties = OrderedDict()
         if col_mapping:
             for db_col in db_cols:
                 if not db_col.type.__class__.__name__ == "Geometry":
-                    shp_properties.update(
+                    cls.shp_properties.update(
                         {
                             col_mapping.get(db_col.key): FIONA_MAPPING.get(
                                 db_col.type.__class__.__name__.lower()
@@ -82,7 +73,7 @@ class FionaShapeService:
         else:
             for db_col in db_cols:
                 if not db_col.type.__class__.__name__ == "Geometry":
-                    shp_properties.update(
+                    cls.shp_properties.update(
                         {
                             db_col.key: FIONA_MAPPING.get(
                                 db_col.type.__class__.__name__.lower()
@@ -90,33 +81,6 @@ class FionaShapeService:
                         }
                     )
                     cls.columns.append(db_col.key)
-
-        cls.polygon_schema = {"geometry": "MultiPolygon",
-                              "properties": shp_properties}
-        cls.point_schema = {"geometry": "Point", "properties": shp_properties}
-        cls.polyline_schema = {"geometry": "LineString",
-                               "properties": shp_properties}
-
-        cls.file_point = cls.dir_path + "/POINT_" + cls.file_name
-        cls.file_poly = cls.dir_path + "/POLYGON_" + cls.file_name
-        cls.file_line = cls.dir_path + "/POLYLINE_" + cls.file_name
-        # boolean to check if features are register in the shapefile
-        cls.point_feature = False
-        cls.polygon_feature = False
-        cls.polyline_feature = False
-        cls.point_shape = fiona.open(
-            cls.file_point, "w", "ESRI Shapefile", cls.point_schema, crs=cls.source_crs
-        )
-        cls.polygone_shape = fiona.open(
-            cls.file_poly, "w", "ESRI Shapefile", cls.polygon_schema, crs=cls.source_crs
-        )
-        cls.polyline_shape = fiona.open(
-            cls.file_line,
-            "w",
-            "ESRI Shapefile",
-            cls.polyline_schema,
-            crs=cls.source_crs,
-        )
 
     @classmethod
     def create_feature(cls, data, geom):
@@ -147,6 +111,170 @@ class FionaShapeService:
             raise UtilsSqlaError(e)
 
     @classmethod
+    def write_a_feature(cls, feature, geom_wkt):
+        """
+            write a feature by checking the type of the shape given
+        """
+        if cls.export_type == "shp":
+            if isinstance(geom_wkt, Point):
+                cls.point_shape.write(feature)
+                cls.point_feature = True
+            elif isinstance(geom_wkt, Polygon) or isinstance(geom_wkt, MultiPolygon):
+                cls.polygone_shape.write(feature)
+                cls.polygon_feature = True
+            else:
+                cls.polyline_shape.write(feature)
+                cls.polyline_feature = True
+        elif cls.export_type == "gpkg":
+            cls.gpkg_file.write(feature)
+
+
+class FionaGpkgService(FionaService):
+    """
+    Service to create gpkg from sqlalchemy models
+
+    How to use:
+    FionaShapeService.create_shapes_struct(**args)
+    FionaShapeService.create_features(**args)
+    FionaShapeService.save_and_zip_shapefiles()
+    """
+
+    @classmethod
+    def create_fiona_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
+        cls.export_type = "gpkg"
+        cls.create_fiona_properties(db_cols, srid, dir_path, file_name, col_mapping)
+
+        cls.gpkg_schema = {
+            "geometry": "Unknown",
+            "properties": cls.shp_properties
+        }
+
+        cls.filename_gpkg = cls.dir_path + "/" + cls.file_name + ".gpkg"
+
+        cls.gpkg_file = fiona.open(
+            cls.filename_gpkg,
+            "w",
+            "GPKG",
+            cls.gpkg_schema,
+            crs=cls.source_crs,
+        )
+
+    @classmethod
+    def create_features_generic(cls, view, data, geom_col, geojson_col=None):
+        """
+        Create the features of the shapefiles by serializing the datas from a GenericTable (non mapped table)
+
+        Parameters:
+            view (GenericTable): the GenericTable object
+            data (list): Array of SQLA model
+            geom_col (str): name of the WKB geometry column of the SQLA Model
+            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                               for performance reason its better to use geojson_col rather than geom_col
+
+        Returns:
+            void
+
+        """
+        cls.export_type = "gpkg"
+        # if the geojson col is not given
+        # build it with shapely via the WKB col
+        if geojson_col is None:
+            for d in data:
+                geom = getattr(d, geom_col)
+                geom_wkt = to_shape(geom)
+                geom_geojson = mapping(geom_wkt) # TODO TEST
+                feature = {
+                    "geometry": geom_geojson,
+                    "properties": view.as_dict(d, columns=cls.columns),
+                }
+                cls.write_a_feature(feature, geom_wkt)
+        else:
+            for d in data:
+                geom_geojson = ast.literal_eval(getattr(d, geojson_col))
+                feature = {
+                    "geometry": geom_geojson,
+                    "properties": view.as_dict(d, columns=cls.columns),
+                }
+                cls.gpkg_file.write(feature)
+
+    @classmethod
+    def save_files(cls):
+        """
+        Save and zip the files
+        Only zip files where there is at least on feature
+
+        Returns:
+            void
+        """
+        cls.export_type = "gpkg"
+        cls.close_files()
+
+    @classmethod
+    def close_files(cls):
+        """
+        Save the files
+        """
+        cls.gpkg_file.close()
+
+class FionaShapeService(FionaService):
+    """
+    Service to create shapefiles from sqlalchemy models
+
+    How to use:
+    FionaShapeService.create_shapes_struct(**args)
+    FionaShapeService.create_features(**args)
+    FionaShapeService.save_and_zip_shapefiles()
+    """
+
+
+    @classmethod
+    def create_fiona_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
+        """
+        Create three shapefiles (point, line, polygon) with the attributes give by db_cols
+        Parameters:
+            db_cols (list): columns from a SQLA model (model.__mapper__.c)
+            srid (int): epsg code
+            dir_path (str): directory path
+            file_name (str): file of the shapefiles
+            col_mapping (dict): mapping between SQLA class attributes and 'beatifiul' columns name
+
+        Returns:
+            void
+        """
+        cls.export_type = "shp"
+        # Création structure des proprités fiona
+        cls.create_fiona_properties(db_cols, srid, dir_path, file_name, col_mapping)
+
+        cls.polygon_schema = {"geometry": "MultiPolygon",
+                              "properties": cls.shp_properties}
+        cls.point_schema = {"geometry": "Point", "properties": cls.shp_properties}
+        cls.polyline_schema = {"geometry": "LineString",
+                               "properties": cls.shp_properties}
+
+        cls.file_point = cls.dir_path + "/POINT_" + cls.file_name
+        cls.file_poly = cls.dir_path + "/POLYGON_" + cls.file_name
+        cls.file_line = cls.dir_path + "/POLYLINE_" + cls.file_name
+        # boolean to check if features are register in the shapefile
+        cls.point_feature = False
+        cls.polygon_feature = False
+        cls.polyline_feature = False
+        cls.point_shape = fiona.open(
+            cls.file_point, "w", "ESRI Shapefile", cls.point_schema, crs=cls.source_crs
+        )
+        cls.polygone_shape = fiona.open(
+            cls.file_poly, "w", "ESRI Shapefile", cls.polygon_schema, crs=cls.source_crs
+        )
+        cls.polyline_shape = fiona.open(
+            cls.file_line,
+            "w",
+            "ESRI Shapefile",
+            cls.polyline_schema,
+            crs=cls.source_crs,
+        )
+
+    create_shapes_struct = create_fiona_struct
+
+    @classmethod
     def create_features_generic(cls, view, data, geom_col, geojson_col=None):
         """
         Create the features of the shapefiles by serializing the datas from a GenericTable (non mapped table)
@@ -164,11 +292,12 @@ class FionaShapeService:
         """
         # if the geojson col is not given
         # build it with shapely via the WKB col
+        cls.export_type = "shp"
         if geojson_col is None:
             for d in data:
                 geom = getattr(d, geom_col)
                 geom_wkt = to_shape(geom)
-                geom_geojson = mapping(geom_wkt)
+                geom_geojson = mapping(geom_wkt) # TODO TEST
                 feature = {
                     "geometry": geom_geojson,
                     "properties": view.as_dict(d, columns=cls.columns),
@@ -193,24 +322,10 @@ class FionaShapeService:
                 else:
                     cls.polyline_shape.write(feature)
                     cls.polyline_feature = True
+        cls.close_files()
 
     @classmethod
-    def write_a_feature(cls, feature, geom_wkt):
-        """
-            write a feature by checking the type of the shape given
-        """
-        if isinstance(geom_wkt, Point):
-            cls.point_shape.write(feature)
-            cls.point_feature = True
-        elif isinstance(geom_wkt, Polygon) or isinstance(geom_wkt, MultiPolygon):
-            cls.polygone_shape.write(feature)
-            cls.polygon_feature = True
-        else:
-            cls.polyline_shape.write(feature)
-            cls.polyline_feature = True
-
-    @classmethod
-    def save_and_zip_shapefiles(cls):
+    def save_files(cls):
         """
         Save and zip the files
         Only zip files where there is at least on feature
@@ -218,6 +333,7 @@ class FionaShapeService:
         Returns:
             void
         """
+        cls.export_type = "shp"
         cls.close_files()
 
         format_to_save = []
@@ -246,6 +362,8 @@ class FionaShapeService:
                 )
         zp_file.close()
 
+    save_and_zip_shapefiles = save_files
+
     @classmethod
     def close_files(cls):
         cls.point_shape.close()
@@ -262,9 +380,35 @@ def create_shapes_generic(
     FionaShapeService.save_and_zip_shapefiles()
 
 
+def create_gpkg_generic(
+    view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
+):
+    FionaGpkgService.create_fiona_struct(
+        db_cols, srid, dir_path, file_name
+    )
+    FionaGpkgService.create_features_generic(
+        view, data, geom_col, geojson_col
+    )
+    FionaGpkgService.save_files()
+
+def export_geodata_as_file(
+    view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col, export_format="gpkg"
+):
+    if export_format == "gpkg":
+        create_gpkg_generic(
+            view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
+        )
+    elif export_format == "shp":
+        create_shapes_generic(
+            view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
+        )
+    else:
+        # TODO raise ERROR unsupported format
+        pass
+
 def circle_from_point(point, radius, nb_point=20):
     """
-    return a circle (shapely POLYGON) from a point 
+    return a circle (shapely POLYGON) from a point
     parameters:
         - point: a shapely POINT
         - radius: circle's diameter in meter
