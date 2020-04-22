@@ -30,8 +30,7 @@ FIONA_MAPPING = {
     "bigint": "int",
     "float": "float",
     "boolean": "str",
-    "double_precision": "float",
-    "uuid": "str",
+    "double_precision": "float"
 }
 
 class FionaService:
@@ -259,10 +258,18 @@ class FionaShapeService(FionaService):
         cls.polygon_feature = False
         cls.polyline_feature = False
         cls.point_shape = fiona.open(
-            cls.file_point, "w", "ESRI Shapefile", cls.point_schema, crs=cls.source_crs
+            cls.file_point, 
+            "w", 
+            "ESRI Shapefile", 
+            cls.point_schema, 
+            crs=cls.source_crs
         )
         cls.polygone_shape = fiona.open(
-            cls.file_poly, "w", "ESRI Shapefile", cls.polygon_schema, crs=cls.source_crs
+            cls.file_poly, 
+            "w", 
+            "ESRI Shapefile", 
+            cls.polygon_schema, 
+            crs=cls.source_crs
         )
         cls.polyline_shape = fiona.open(
             cls.file_line,
@@ -376,6 +383,19 @@ class FionaShapeService(FionaService):
 def create_shapes_generic(
     view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
 ):
+    """
+        Export data in shape files (separated bu geometry type)
+        Parameters:
+            srid (int): epsg code
+            db_cols (list): columns from a SQLA model (model.__mapper__.c)
+            data (list): Array of SQLA model
+            dir_path (str): directory path
+            file_name (str): file of the shapefiles
+            geom_col (str): name of the WKB geometry column of the SQLA Model
+            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                               for performance reason its better to use geojson_col rather than geom_col
+    """
+    
     FionaShapeService.create_shapes_struct(db_cols, srid, dir_path, file_name)
     FionaShapeService.create_features_generic(
         view, data, geom_col, geojson_col)
@@ -385,6 +405,19 @@ def create_shapes_generic(
 def create_gpkg_generic(
     view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
 ):
+    """
+        Export data in gpkg file
+        Parameters:
+            srid (int): epsg code
+            db_cols (list): columns from a SQLA model (model.__mapper__.c)
+            data (list): Array of SQLA model
+            dir_path (str): directory path
+            file_name (str): file of the shapefiles
+            geom_col (str): name of the WKB geometry column of the SQLA Model
+            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                               for performance reason its better to use geojson_col rather than geom_col
+    """
+
     FionaGpkgService.create_fiona_struct(
         db_cols, srid, dir_path, file_name
     )
@@ -393,9 +426,24 @@ def create_gpkg_generic(
     )
     FionaGpkgService.save_files()
 
+
 def export_geodata_as_file(
     view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col, export_format="gpkg"
 ):
+    """
+        Generic export data
+        Parameters:
+            srid (int): epsg code
+            db_cols (list): columns from a SQLA model (model.__mapper__.c)
+            data (list): Array of SQLA model
+            dir_path (str): directory path
+            file_name (str): file of the shapefiles
+            geom_col (str): name of the WKB geometry column of the SQLA Model
+            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                               for performance reason its better to use geojson_col rather than geom_col
+            export_format (str) : name of the exported format
+
+    """
     if export_format == "gpkg":
         create_gpkg_generic(
             view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col

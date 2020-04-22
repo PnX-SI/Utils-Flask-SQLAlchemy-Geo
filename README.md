@@ -37,8 +37,15 @@ Le décorateur de classe `@shapeserializable` permet la création de shapefiles 
 
 - Ajoute une méthode `as_list` qui retourne l'objet sous forme de tableau
   (utilisé pour créer des shapefiles)
-- Ajoute une méthode de classe `to_shape` qui crée des shapefiles à partir
+- Ajoute une méthode de classe `as_shape` qui crée des shapefiles à partir
   des données passées en paramètre
+
+Le décorateur de classe `@geofileserializable` permet la création de shapefiles ou geopackage issus des classes SQLAlchemy:
+
+- Ajoute une méthode `as_list` qui retourne l'objet sous forme de tableau
+  (utilisé pour créer des shapefiles)
+- Ajoute une méthode de classe `as_geofile` qui crée des shapefiles ou des geopackage à partir des données passées en paramètre
+
 
 **Utilisation**
 
@@ -52,6 +59,7 @@ Fichier définition modèle :
 
 
       @shapeserializable
+      @geofileserializable
       class MyModel(DB.Model):
           __tablename__ = 'bla'
           ...
@@ -66,27 +74,35 @@ Fichier utilisation modele :
         dir_path=str(ROOT_DIR / 'backend/static/shapefiles'),
         file_name=file_name
     )
+    # OU 
+    MyShapeserializableClass.as_geofile(
+        export_format="shp",
+        geom_col='geom_4326',
+        srid=4326,
+        data=data,
+        dir_path=str(ROOT_DIR / 'backend/static/shapefiles'),
+        file_name=file_name
+    )
 
 - **La classe FionaShapeService pour générer des shapesfiles**
 
   - `utils_flask_sqla_geo.serializers.FionaShapeService`
+  - `utils_flask_sqla_geo.serializers.FionaGpkgService`
 
-  Classe utilitaire pour crer des shapefiles.
+  Classes utilitaires pour crer des shapefiles ou des geopackages.
 
-  La classe contient 3 méthode de classe:
+  Les classes contiennent 3 méthode de classe:
 
-  - FionaShapeService.create_shapes_struct(): crée la structure de 3 shapefiles
-    (point, ligne, polygone) à partir des colonens et de la geom passé en
-    paramètre
-  - FionaShapeService.create_feature(): ajoute un enregistrement aux shapefiles
-  - FionaShapeService.save_and_zip_shapefiles(): sauvegarde et zip les shapefiles
-    qui ont au moin un enregistrement
+  - create_fiona_struct(): crée la structure des fichers exports
+      - Pour les shapefiles : 3 shapefiles (point, ligne, polygone) à partir des colonens et de la geom passé en  paramètre
+  - create_feature(): ajoute un enregistrement au(x) fichier(s)
+  - save_files(): sauvegarde le(s) fichier(s)  et crer un zip pour les shapefiles qui ont au moin un enregistrement
 
 
           data = DB.session.query(MySQLAModel).all()
 
           for d in data:
-                  FionaShapeService.create_shapes_struct(
+                  FionaShapeService.create_fiona_struct(
                           db_cols=db_cols,
                           srid=current_app.config['LOCAL_SRID'],
                           dir_path=dir_path,
@@ -95,6 +111,7 @@ Fichier utilisation modele :
                   )
           FionaShapeService.create_feature(row_as_dict, geom)
                   FionaShapeService.save_and_zip_shapefiles()
+
 
 - **Les GenericTableGeo et les GenericQueryGeo**
 
