@@ -86,17 +86,17 @@ Fichier utilisation modele :
 
 - **La classe FionaShapeService pour générer des shapesfiles**
 
-  - `utils_flask_sqla_geo.serializers.FionaShapeService`
-  - `utils_flask_sqla_geo.serializers.FionaGpkgService`
+  - `utils_flask_sqla_geo.utilsgeometry.FionaShapeService`
+  - `utils_flask_sqla_geo.utilsgeometry.FionaGpkgService`
 
   Classes utilitaires pour crer des shapefiles ou des geopackages.
 
   Les classes contiennent 3 méthode de classe:
 
-  - create_fiona_struct(): crée la structure des fichers exports
+  - `create_fiona_struct()`: crée la structure des fichers exports
       - Pour les shapefiles : 3 shapefiles (point, ligne, polygone) à partir des colonens et de la geom passé en  paramètre
-  - create_feature(): ajoute un enregistrement au(x) fichier(s)
-  - save_files(): sauvegarde le(s) fichier(s)  et crer un zip pour les shapefiles qui ont au moin un enregistrement
+  - `create_feature()`: ajoute un enregistrement au(x) fichier(s)
+  - `save_files()`: sauvegarde le(s) fichier(s)  et crer un zip pour les shapefiles qui ont au moin un enregistrement
 
 
           data = DB.session.query(MySQLAModel).all()
