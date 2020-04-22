@@ -110,7 +110,7 @@ Fichier utilisation modele :
                           col_mapping=current_app.config['SYNTHESE']['EXPORT_COLUMNS']
                   )
           FionaShapeService.create_feature(row_as_dict, geom)
-                  FionaShapeService.save_and_zip_shapefiles()
+          FionaShapeService.save_files()
 
 
 - **Les GenericTableGeo et les GenericQueryGeo**
