@@ -113,7 +113,6 @@ class FionaService(ABC):
                 geo_colname (string) : nom de la colonne contenant le geom
         """
         # Test if geom data exists
-        print(geo_colname,  getattr(data, geo_colname, None))
         if not getattr(data, geo_colname, None):
             raise UtilsSqlaError("Cannot create a shapefile record whithout a Geometry")
 
@@ -174,7 +173,7 @@ class FionaService(ABC):
             ):
                 cls.polygone_shape.write(feature)
                 cls.polygon_feature = True
-            else:
+            elif isinstance(geom_wkt, LineString):
                 cls.polyline_shape.write(feature)
                 cls.polyline_feature = True
         elif cls.export_type == "gpkg":
