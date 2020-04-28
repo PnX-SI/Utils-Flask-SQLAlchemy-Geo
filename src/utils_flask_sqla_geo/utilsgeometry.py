@@ -101,6 +101,41 @@ class FionaService(ABC):
                     )
                     cls.columns.append(db_col.key)
 
+
+    @classmethod
+    def create_features_generic(cls, view, data, geom_col, geojson_col=None):
+        """
+        Create the features of the shapefiles by serializing the datas from a GenericTable (non mapped table)
+
+        Parameters:
+            view (GenericTable): the GenericTable object
+            data (list): Array of SQLA model
+            geom_col (str): name of the WKB geometry column of the SQLA Model
+            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                               for performance reason its better to use geojson_col rather than geom_col
+
+        Returns:
+            void
+
+        """
+        # if the geojson col is not given
+        # build it with shapely via the WKB col
+        if geojson_col is None:
+            is_geojson = False
+            geo_colname = geom_col
+        else:
+            is_geojson = True
+            geo_colname = geojson_col
+
+        for d in data:
+            try:
+                cls.build_feature(view, d, geo_colname, is_geojson)
+            except UtilsSqlaError:
+                # TODO raise error or warning ??
+                pass
+
+        cls.close_files()
+
     @classmethod
     def build_feature(cls, view, data, geo_colname, is_geojson):
         """
@@ -141,7 +176,6 @@ class FionaService(ABC):
         Returns:
             void
         """
-        print("create_frture", is_geojson)
         try:
             if is_geojson:
                 geom_wkt = shape(geom)
@@ -186,7 +220,7 @@ class FionaService(ABC):
 
     @classmethod
     @abstractmethod
-    def create_features_generic(cls, view, data, geom_col, geojson_col=None):
+    def write_a_feature(cls, feature, geom_wkt):
         pass
 
     @classmethod
@@ -224,39 +258,11 @@ class FionaGpkgService(FionaService):
         )
 
     @classmethod
-    def create_features_generic(cls, view, data, geom_col, geojson_col=None):
+    def write_a_feature(cls, feature, geom_wkt):
         """
-        Create the features of the shapefiles by serializing the datas from a GenericTable (non mapped table)
-
-        Parameters:
-            view (GenericTable): the GenericTable object
-            data (list): Array of SQLA model
-            geom_col (str): name of the WKB geometry column of the SQLA Model
-            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                for performance reason its better to use geojson_col rather than geom_col
-
-        Returns:
-            void
-
+            write a feature by checking the type of the shape given
         """
-        cls.export_type = "gpkg"
-
-        # if the geojson col is not given
-        # build it with shapely via the WKB col
-        if geojson_col is None:
-            is_geojson = False
-            geo_colname = geom_col
-        else:
-            is_geojson = True
-            geo_colname = geojson_col
-
-        for d in data:
-            try:
-                cls.build_feature(view, data, geo_colname, is_geojson)
-            except UtilsSqlaError:
-                pass
-
-
+        cls.gpkg_file.write(feature)
 
     @classmethod
     def save_files(cls):
@@ -341,40 +347,22 @@ class FionaShapeService(FionaService):
     create_shapes_struct = create_fiona_struct
 
     @classmethod
-    def create_features_generic(cls, view, data, geom_col, geojson_col=None):
+    def write_a_feature(cls, feature, geom_wkt):
         """
-        Create the features of the shapefiles by serializing the datas from a GenericTable (non mapped table)
-
-        Parameters:
-            view (GenericTable): the GenericTable object
-            data (list): Array of SQLA model
-            geom_col (str): name of the WKB geometry column of the SQLA Model
-            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                               for performance reason its better to use geojson_col rather than geom_col
-
-        Returns:
-            void
-
+            write a feature by checking the type of the shape given
         """
-        cls.export_type = "shp"
-
-        # if the geojson col is not given
-        # build it with shapely via the WKB col
-        if geojson_col is None:
-            is_geojson = False
-            geo_colname = geom_col
-        else:
-            is_geojson = True
-            geo_colname = geojson_col
-
-        for d in data:
-            try:
-                cls.build_feature(view, d, geo_colname, is_geojson)
-            except UtilsSqlaError:
-                # TODO raise error or warning ??
-                pass
-
-        cls.close_files()
+        if isinstance(geom_wkt, Point):
+            cls.point_shape.write(feature)
+            cls.point_feature = True
+        elif (
+            isinstance(geom_wkt, Polygon)
+            or isinstance(geom_wkt, MultiPolygon)
+        ):
+            cls.polygone_shape.write(feature)
+            cls.polygon_feature = True
+        elif isinstance(geom_wkt, LineString):
+            cls.polyline_shape.write(feature)
+            cls.polyline_feature = True
 
     @classmethod
     def save_files(cls):
@@ -489,7 +477,6 @@ def export_geodata_as_file(
             geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
                                for performance reason its better to use geojson_col rather than geom_col
             export_format (str) : name of the exported format
-
     """
     if export_format == "gpkg":
         create_gpkg_generic(
@@ -502,6 +489,7 @@ def export_geodata_as_file(
     else:
         # TODO raise ERROR unsupported format
         pass
+
 
 
 def circle_from_point(point, radius, nb_point=20):
