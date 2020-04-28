@@ -1,6 +1,7 @@
 import datetime
 import ast
 
+from abc import ABC, abstractmethod
 from collections import OrderedDict
 
 import numpy as np
@@ -30,14 +31,26 @@ FIONA_MAPPING = {
     "bigint": "int",
     "float": "float",
     "boolean": "str",
-    "double_precision": "float"
+    "double_precision": "float",
 }
 
-class FionaService:
+
+class FionaService(ABC):
+    """
+    Abstract class to provide functions to create geofiles with Fiona
+    Class who inherite of this class must implement the following abstract methods:
+    - create_fiona_struct
+    - create_features_generic
+    - save-files
+    - close-files
+    """
+
     supported_type = ("shp", "gpkg")
 
     @classmethod
-    def create_fiona_properties(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
+    def create_fiona_properties(
+        cls, db_cols, srid, dir_path, file_name, col_mapping=None
+    ):
         """
         Create three shapefiles (point, line, polygon) with the attributes give by db_cols
         Parameters:
@@ -102,9 +115,7 @@ class FionaService:
             cls.write_a_feature(feature, geom_wkt)
         except AssertionError:
             cls.close_files()
-            raise UtilsSqlaError(
-                "Cannot create a shapefile record whithout a Geometry"
-            )
+            raise UtilsSqlaError("Cannot create a shapefile record whithout a Geometry")
         except Exception as e:
             cls.close_files()
             raise UtilsSqlaError(e)
@@ -127,6 +138,26 @@ class FionaService:
         elif cls.export_type == "gpkg":
             cls.gpkg_file.write(feature)
 
+    @classmethod
+    @abstractmethod
+    def create_fiona_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def create_features_generic(cls, view, data, geom_col, geojson_col=None):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def save_files(cls):
+        pass
+
+    @classmethod
+    @abstractmethod
+    def close_files(cls):
+        pass
+
 
 class FionaGpkgService(FionaService):
     """
@@ -143,19 +174,12 @@ class FionaGpkgService(FionaService):
         cls.export_type = "gpkg"
         cls.create_fiona_properties(db_cols, srid, dir_path, file_name, col_mapping)
 
-        cls.gpkg_schema = {
-            "geometry": "Unknown",
-            "properties": cls.shp_properties
-        }
+        cls.gpkg_schema = {"geometry": "Unknown", "properties": cls.shp_properties}
 
         cls.filename_gpkg = cls.dir_path + "/" + cls.file_name + ".gpkg"
 
         cls.gpkg_file = fiona.open(
-            cls.filename_gpkg,
-            "w",
-            "GPKG",
-            cls.gpkg_schema,
-            crs=cls.source_crs,
+            cls.filename_gpkg, "w", "GPKG", cls.gpkg_schema, crs=cls.source_crs,
         )
 
     @classmethod
@@ -181,7 +205,7 @@ class FionaGpkgService(FionaService):
             for d in data:
                 geom = getattr(d, geom_col)
                 geom_wkt = to_shape(geom)
-                geom_geojson = mapping(geom_wkt) # TODO TEST
+                geom_geojson = mapping(geom_wkt)  # TODO TEST
                 feature = {
                     "geometry": geom_geojson,
                     "properties": view.as_dict(d, columns=cls.columns),
@@ -215,6 +239,7 @@ class FionaGpkgService(FionaService):
         """
         cls.gpkg_file.close()
 
+
 class FionaShapeService(FionaService):
     """
     Service to create shapefiles from sqlalchemy models
@@ -224,7 +249,6 @@ class FionaShapeService(FionaService):
     FionaShapeService.create_features(**args)
     FionaShapeService.save_and_zip_shapefiles()
     """
-
 
     @classmethod
     def create_fiona_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
@@ -244,11 +268,15 @@ class FionaShapeService(FionaService):
         # Création structure des proprités fiona
         cls.create_fiona_properties(db_cols, srid, dir_path, file_name, col_mapping)
 
-        cls.polygon_schema = {"geometry": "MultiPolygon",
-                              "properties": cls.shp_properties}
+        cls.polygon_schema = {
+            "geometry": "MultiPolygon",
+            "properties": cls.shp_properties,
+        }
         cls.point_schema = {"geometry": "Point", "properties": cls.shp_properties}
-        cls.polyline_schema = {"geometry": "LineString",
-                               "properties": cls.shp_properties}
+        cls.polyline_schema = {
+            "geometry": "LineString",
+            "properties": cls.shp_properties,
+        }
 
         cls.file_point = cls.dir_path + "/POINT_" + cls.file_name
         cls.file_poly = cls.dir_path + "/POLYGON_" + cls.file_name
@@ -258,18 +286,10 @@ class FionaShapeService(FionaService):
         cls.polygon_feature = False
         cls.polyline_feature = False
         cls.point_shape = fiona.open(
-            cls.file_point, 
-            "w", 
-            "ESRI Shapefile", 
-            cls.point_schema, 
-            crs=cls.source_crs
+            cls.file_point, "w", "ESRI Shapefile", cls.point_schema, crs=cls.source_crs
         )
         cls.polygone_shape = fiona.open(
-            cls.file_poly, 
-            "w", 
-            "ESRI Shapefile", 
-            cls.polygon_schema, 
-            crs=cls.source_crs
+            cls.file_poly, "w", "ESRI Shapefile", cls.polygon_schema, crs=cls.source_crs
         )
         cls.polyline_shape = fiona.open(
             cls.file_line,
@@ -305,7 +325,7 @@ class FionaShapeService(FionaService):
             for d in data:
                 geom = getattr(d, geom_col)
                 geom_wkt = to_shape(geom)
-                geom_geojson = mapping(geom_wkt) # TODO TEST
+                geom_geojson = mapping(geom_wkt)  # TODO TEST
                 feature = {
                     "geometry": geom_geojson,
                     "properties": view.as_dict(d, columns=cls.columns),
@@ -369,7 +389,7 @@ class FionaShapeService(FionaService):
                     shape_format + "_" + cls.file_name + "." + ext,
                 )
         zp_file.close()
-    
+
     # TODO mark as deprecated
     save_and_zip_shapefiles = save_files
 
@@ -395,10 +415,9 @@ def create_shapes_generic(
             geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
                                for performance reason its better to use geojson_col rather than geom_col
     """
-    
+
     FionaShapeService.create_shapes_struct(db_cols, srid, dir_path, file_name)
-    FionaShapeService.create_features_generic(
-        view, data, geom_col, geojson_col)
+    FionaShapeService.create_features_generic(view, data, geom_col, geojson_col)
     FionaShapeService.save_and_zip_shapefiles()
 
 
@@ -418,17 +437,21 @@ def create_gpkg_generic(
                                for performance reason its better to use geojson_col rather than geom_col
     """
 
-    FionaGpkgService.create_fiona_struct(
-        db_cols, srid, dir_path, file_name
-    )
-    FionaGpkgService.create_features_generic(
-        view, data, geom_col, geojson_col
-    )
+    FionaGpkgService.create_fiona_struct(db_cols, srid, dir_path, file_name)
+    FionaGpkgService.create_features_generic(view, data, geom_col, geojson_col)
     FionaGpkgService.save_files()
 
 
 def export_geodata_as_file(
-    view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col, export_format="gpkg"
+    view,
+    srid,
+    db_cols,
+    data,
+    dir_path,
+    file_name,
+    geom_col,
+    geojson_col,
+    export_format="gpkg",
 ):
     """
         Generic export data
@@ -456,6 +479,7 @@ def export_geodata_as_file(
         # TODO raise ERROR unsupported format
         pass
 
+
 def circle_from_point(point, radius, nb_point=20):
     """
     return a circle (shapely POLYGON) from a point
@@ -476,11 +500,9 @@ def convert_to_2d(geojson):
     """
     # if its a Linestring, Polygon etc...
     if geojson["coordinates"][0] is list:
-        two_d_coordinates = [[coord[0], coord[1]]
-                             for coord in geojson["coordinates"]]
+        two_d_coordinates = [[coord[0], coord[1]] for coord in geojson["coordinates"]]
     else:
-        two_d_coordinates = [geojson["coordinates"]
-                             [0], geojson["coordinates"][1]]
+        two_d_coordinates = [geojson["coordinates"][0], geojson["coordinates"][1]]
 
     geojson["coordinates"] = two_d_coordinates
 
@@ -545,6 +567,6 @@ def remove_third_dimension(geom):
 
     else:
         raise RuntimeError(
-            "Currently this type of geometry is not supported: {}".format(
-                type(geom))
+            "Currently this type of geometry is not supported: {}".format(type(geom))
         )
+
