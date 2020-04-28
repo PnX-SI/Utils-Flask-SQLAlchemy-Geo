@@ -1,4 +1,3 @@
-import datetime
 import ast
 
 from abc import ABC, abstractmethod
@@ -11,7 +10,14 @@ import fiona
 
 from fiona.crs import from_epsg
 from geoalchemy2.shape import to_shape
-from shapely.geometry import *
+from shapely.geometry import (
+    mapping,
+    Point, MultiPoint,
+    Polygon, MultiPolygon,
+    LineString, MultiLineString,
+    LinearRing,
+    GeometryCollection
+)
 
 from utils_flask_sqla.errors import UtilsSqlaError
 
@@ -58,7 +64,8 @@ class FionaService(ABC):
             srid (int): epsg code
             dir_path (str): directory path
             file_name (str): file of the shapefiles
-            col_mapping (dict): mapping between SQLA class attributes and 'beatifiul' columns name
+            col_mapping (dict): mapping between SQLA class
+                            attributes and 'beatifiul' columns name
 
         Returns:
             void
@@ -108,7 +115,6 @@ class FionaService(ABC):
         # Test if geom data exists
         print(geo_colname,  getattr(data, geo_colname, None))
         if not getattr(data, geo_colname, None):
-            # TODO raise warning
             raise UtilsSqlaError("Cannot create a shapefile record whithout a Geometry")
 
         # Build geometry
@@ -162,7 +168,10 @@ class FionaService(ABC):
             if isinstance(geom_wkt, Point):
                 cls.point_shape.write(feature)
                 cls.point_feature = True
-            elif isinstance(geom_wkt, Polygon) or isinstance(geom_wkt, MultiPolygon):
+            elif (
+                isinstance(geom_wkt, Polygon)
+                or isinstance(geom_wkt, MultiPolygon)
+            ):
                 cls.polygone_shape.write(feature)
                 cls.polygon_feature = True
             else:
