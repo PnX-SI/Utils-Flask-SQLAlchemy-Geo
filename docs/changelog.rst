@@ -2,12 +2,16 @@
 CHANGELOG
 =========
 
-0.0.3 (unreleased)
+0.1.0 (unreleased)
 ------------------
+
+**Nouveautés**
+
+* Ajout de l'export au format GeoPackage en plus du format Shapefile existant, avec la fonction ``as_geofile`` qui remplace ``as_shape`` (conservée pour rétrocompatibilité) (#3)
 
 **Corrections**
 
-* 
+* Compléments et révision de la documentation
 
 0.0.2 (2020-02-21)
 ------------------
