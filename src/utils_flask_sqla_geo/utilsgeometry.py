@@ -193,27 +193,6 @@ class FionaService(ABC):
             raise UtilsSqlaError(e)
 
     @classmethod
-    def write_a_feature(cls, feature, geom_wkt):
-        """
-            write a feature by checking the type of the shape given
-        """
-        if cls.export_type == "shp":
-            if isinstance(geom_wkt, Point):
-                cls.point_shape.write(feature)
-                cls.point_feature = True
-            elif (
-                isinstance(geom_wkt, Polygon)
-                or isinstance(geom_wkt, MultiPolygon)
-            ):
-                cls.polygone_shape.write(feature)
-                cls.polygon_feature = True
-            elif isinstance(geom_wkt, LineString):
-                cls.polyline_shape.write(feature)
-                cls.polyline_feature = True
-        elif cls.export_type == "gpkg":
-            cls.gpkg_file.write(feature)
-
-    @classmethod
     @abstractmethod
     def create_fiona_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
         pass
