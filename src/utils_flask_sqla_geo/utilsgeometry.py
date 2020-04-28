@@ -11,7 +11,7 @@ import fiona
 from fiona.crs import from_epsg
 from geoalchemy2.shape import to_shape
 from shapely.geometry import (
-    mapping,
+    mapping, shape,
     Point, MultiPoint,
     Polygon, MultiPolygon,
     LineString, MultiLineString,
@@ -118,22 +118,17 @@ class FionaService(ABC):
 
         # Build geometry
         if is_geojson:
-            geom_geojson = ast.literal_eval(getattr(data, geo_colname))
+            geom = ast.literal_eval(getattr(data, geo_colname))
+
         else:
             geom = getattr(data, geo_colname)
-            geom_wkt = to_shape(geom)
-            geom_geojson = mapping(geom_wkt)
 
         # Build feature
-        feature = {
-            "geometry": geom_geojson,
-            "properties": view.as_dict(data, columns=cls.columns),
-        }
-        return feature
+        cls.create_feature(view.as_dict(data, columns=cls.columns), geom, is_geojson)
 
 
     @classmethod
-    def create_feature(cls, data, geom):
+    def create_feature(cls, data, geom, is_geojson=False):
         """
         Create and write feature (a record of the file) for WKB data
         by serializing an SQLAlchemy object
@@ -146,9 +141,14 @@ class FionaService(ABC):
         Returns:
             void
         """
+        print("create_frture", is_geojson)
         try:
-            geom_wkt = to_shape(geom)
-            geom_geojson = mapping(geom_wkt)
+            if is_geojson:
+                geom_wkt = shape(geom)
+                geom_geojson = geom
+            else:
+                geom_wkt = to_shape(geom)
+                geom_geojson = mapping(geom_wkt)
             feature = {"geometry": geom_geojson, "properties": data}
             cls.write_a_feature(feature, geom_wkt)
         except AssertionError:
@@ -233,7 +233,7 @@ class FionaGpkgService(FionaService):
             data (list): Array of SQLA model
             geom_col (str): name of the WKB geometry column of the SQLA Model
             geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                               for performance reason its better to use geojson_col rather than geom_col
+                for performance reason its better to use geojson_col rather than geom_col
 
         Returns:
             void
@@ -252,8 +252,7 @@ class FionaGpkgService(FionaService):
 
         for d in data:
             try:
-                feature = cls.build_feature(view, data, geo_colname, is_geojson)
-                cls.gpkg_file.write(feature)
+                cls.build_feature(view, data, geo_colname, is_geojson)
             except UtilsSqlaError:
                 pass
 
@@ -359,7 +358,6 @@ class FionaShapeService(FionaService):
         """
         cls.export_type = "shp"
 
-
         # if the geojson col is not given
         # build it with shapely via the WKB col
         if geojson_col is None:
@@ -371,23 +369,7 @@ class FionaShapeService(FionaService):
 
         for d in data:
             try:
-                feature = cls.build_feature(view, d, geo_colname, is_geojson)
-                geom_geojson = feature["geometry"]
-                if geom_geojson["type"] == "Point":
-                    cls.point_shape.write(feature)
-                    cls.point_feature = True
-                elif (
-                    geom_geojson["type"] == "Polygon"
-                    or geom_geojson["type"] == "MultiPolygon"
-                ):
-                    cls.polygone_shape.write(feature)
-                    cls.polygon_feature = True
-                elif geom_geojson["type"] == "LineString":
-                    cls.polyline_shape.write(feature)
-                    cls.polyline_feature = True
-                else:
-                    # TODO raise error or warning ??
-                    pass
+                cls.build_feature(view, d, geo_colname, is_geojson)
             except UtilsSqlaError:
                 # TODO raise error or warning ??
                 pass
