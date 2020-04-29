@@ -12,6 +12,7 @@ CHANGELOG
 
 **Corrections**
 
+* Gestion des géométries multiples
 * Compléments et révision de la documentation
 
 0.0.2 (2020-02-21)
