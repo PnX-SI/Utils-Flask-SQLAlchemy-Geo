@@ -8,6 +8,7 @@ CHANGELOG
 **Nouveautés**
 
 * Ajout de l'export au format GeoPackage en plus du format Shapefile existant, avec la fonction ``as_geofile`` qui remplace ``as_shape`` (conservée pour rétrocompatibilité) (#3)
+* Mise à jour de la librairie Fiona (version 1.7.13 à version 1.8.13.post1)
 
 **Corrections**
 
