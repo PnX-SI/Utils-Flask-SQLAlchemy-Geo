@@ -11,12 +11,16 @@ import fiona
 from fiona.crs import from_epsg
 from geoalchemy2.shape import to_shape
 from shapely.geometry import (
-    mapping, shape,
-    Point, MultiPoint,
-    Polygon, MultiPolygon,
-    LineString, MultiLineString,
+    mapping,
+    shape,
+    Point,
+    MultiPoint,
+    Polygon,
+    MultiPolygon,
+    LineString,
+    MultiLineString,
     LinearRing,
-    GeometryCollection
+    GeometryCollection,
 )
 
 from utils_flask_sqla.errors import UtilsSqlaError
@@ -101,7 +105,6 @@ class FionaService(ABC):
                     )
                     cls.columns.append(db_col.key)
 
-
     @classmethod
     def create_features_generic(cls, view, data, geom_col, geojson_col=None):
         """
@@ -130,7 +133,7 @@ class FionaService(ABC):
         for d in data:
             try:
                 cls.build_feature(view, d, geo_colname, is_geojson)
-            except UtilsSqlaError:
+            except UtilsSqlaError as e:
                 # TODO raise error or warning ??
                 pass
 
@@ -160,7 +163,6 @@ class FionaService(ABC):
 
         # Build feature
         cls.create_feature(view.as_dict(data, columns=cls.columns), geom, is_geojson)
-
 
     @classmethod
     def create_feature(cls, data, geom, is_geojson=False):
@@ -292,12 +294,15 @@ class FionaShapeService(FionaService):
         cls.create_fiona_properties(db_cols, srid, dir_path, file_name, col_mapping)
 
         cls.polygon_schema = {
-            "geometry":["Polygon", "MultiPolygon"],
+            "geometry": ["Polygon", "MultiPolygon"],
             "properties": cls.shp_properties,
         }
-        cls.point_schema = {"geometry": "Point", "properties": cls.shp_properties}
+        cls.point_schema = {
+            "geometry": ["Point", "MultiPoint"],
+            "properties": cls.shp_properties,
+        }
         cls.polyline_schema = {
-            "geometry": "LineString",
+            "geometry": ["LineString", "MultiLineString"],
             "properties": cls.shp_properties,
         }
 
@@ -330,16 +335,13 @@ class FionaShapeService(FionaService):
         """
             write a feature by checking the type of the shape given
         """
-        if isinstance(geom_wkt, Point):
+        if isinstance(geom_wkt, Point) or isinstance(geom_wkt, MultiPoint):
             cls.point_shape.write(feature)
             cls.point_feature = True
-        elif (
-            isinstance(geom_wkt, Polygon)
-            or isinstance(geom_wkt, MultiPolygon)
-        ):
+        elif isinstance(geom_wkt, Polygon) or isinstance(geom_wkt, MultiPolygon):
             cls.polygone_shape.write(feature)
             cls.polygon_feature = True
-        elif isinstance(geom_wkt, LineString):
+        elif isinstance(geom_wkt, LineString) or isinstance(geom_wkt, MultiLineString):
             cls.polyline_shape.write(feature)
             cls.polyline_feature = True
 
@@ -468,7 +470,6 @@ def export_geodata_as_file(
     else:
         # TODO raise ERROR unsupported format
         pass
-
 
 
 def circle_from_point(point, radius, nb_point=20):
