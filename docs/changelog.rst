@@ -9,10 +9,11 @@ CHANGELOG
 
 * Ajout de l'export au format GeoPackage en plus du format Shapefile existant, avec la fonction ``as_geofile`` qui remplace ``as_shape`` (conservée pour rétrocompatibilité) (#3)
 * Mise à jour de la librairie Fiona (version 1.7.13 à version 1.8.13.post1)
+* Forcer les ponctuels de géométries simples en multiples pour les exports en SHP (#5)
 
 **Corrections**
 
-* Gestion des géométries multiples
+* Gestion des géométries multiples (#4)
 * Compléments et révision de la documentation
 
 0.0.2 (2020-02-21)
