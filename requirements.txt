@@ -1,4 +1,4 @@
-https://github.com/PnX-SI/Utils-Flask-SQLAlchemy/archive/develop.zip
+git+git://github.com/PnX-SI/Utils-Flask-SQLAlchemy@develop
 
 fiona==1.7.13
 geog==0.0.2
