@@ -3,4 +3,4 @@ fiona==1.7.13
 geog==0.0.2
 geoalchemy2==0.4.0
 shapely==1.5.16
-https://github.com/PnX-SI/Utils-Flask-SQLAlchemy/archive/develop.zip
+utils-flask-sqlalchemy==https://github.com/PnX-SI/Utils-Flask-SQLAlchemy/archive/develop.zip
