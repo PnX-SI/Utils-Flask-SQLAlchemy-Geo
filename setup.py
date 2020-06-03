@@ -24,7 +24,7 @@ setuptools.setup(
     package_dir={'': 'src'},
     install_requires=list(open('requirements.txt', 'r')),
     include_package_data=True,
-    zip_safe=False,
+    zip_safe=True,
     keywords='ww',
     classifiers=['Development Status :: 1 - Planning',
                  'Intended Audience :: Developers',
