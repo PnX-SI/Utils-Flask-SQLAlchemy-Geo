@@ -151,9 +151,8 @@ class FionaService(ABC):
                 geo_colname (string) : nom de la colonne contenant le geom
         """
         # Test if geom data exists
-        if not getattr(data, geo_colname, None):
+        if not hasattr(data, geo_colname):
             raise UtilsSqlaError("Cannot create a shapefile record whithout a Geometry")
-
         # Build geometry
         if is_geojson:
             geom = ast.literal_eval(getattr(data, geo_colname))
@@ -192,7 +191,7 @@ class FionaService(ABC):
             cls.close_files()
             raise UtilsSqlaError("Cannot create a shapefile record whithout a Geometry")
         except Exception as e:
-             # TODO déplacer car le fichier est fermé à la moindre erreur
+            # TODO déplacer car le fichier est fermé à la moindre erreur
             cls.close_files()
             raise UtilsSqlaError(e)
 
@@ -341,22 +340,16 @@ class FionaShapeService(FionaService):
             # Transform point as multipoint :
             #   In shape file point and multipoint canot be mixed
             geom_geojson = mapping(MultiPoint([geom_wkt]))
-            feature['geometry'] = geom_geojson
+            feature["geometry"] = geom_geojson
             cls.point_shape.write(feature)
             cls.point_feature = True
         elif isinstance(geom_wkt, MultiPoint):
             cls.point_shape.write(feature)
             cls.point_feature = True
-        elif (
-            isinstance(geom_wkt, Polygon)
-            or isinstance(geom_wkt, MultiPolygon)
-        ):
+        elif isinstance(geom_wkt, Polygon) or isinstance(geom_wkt, MultiPolygon):
             cls.polygone_shape.write(feature)
             cls.polygon_feature = True
-        elif (
-            isinstance(geom_wkt, LineString)
-            or isinstance(geom_wkt, MultiLineString)
-        ):
+        elif isinstance(geom_wkt, LineString) or isinstance(geom_wkt, MultiLineString):
             cls.polyline_shape.write(feature)
             cls.polyline_feature = True
 
