@@ -1,7 +1,7 @@
 from geojson import Feature, FeatureCollection
 from geoalchemy2.shape import to_shape
 from utils_flask_sqla.generic import GenericQuery, GenericTable
-from .utilsgeometry import create_shapes_generic
+from .utilsgeometry import create_shapes_generic, export_geodata_as_file
 
 
 def get_geojson_feature(wkb):
@@ -48,6 +48,8 @@ class GenericTableGeo(GenericTable):
         self, db_cols, geojson_col=None, data=[], dir_path=None, file_name=None
     ):
         """
+        # RMQ Pour le moment conservé pour des questions de rétrocompatibilité
+
         Create shapefile for generic table
         Parameters:
             db_cols (list): columns from a SQLA model (model.__mapper__.c)
@@ -69,6 +71,37 @@ class GenericTableGeo(GenericTable):
             geojson_col=geojson_col,
             dir_path=dir_path,
             file_name=file_name,
+        )
+
+    def as_geofile(
+        self, export_format, db_cols, geojson_col=None, data=[], dir_path=None, file_name=None
+    ):
+        """
+        Create shapefile or geopackage for generic table
+        Parameters:
+            export_format (str): file format (shp or gpkg)
+            db_cols (list): columns from a SQLA model (model.__mapper__.c)
+            geojson_col (str): the geojson (from st_asgeojson()) column of the mapped table if exist
+                            if None, take the geom_col (WKB) to generate geometry with shapely
+            data (list<Model>): list of data of the shapefiles
+            dir_path (str): directory path
+            file_name (str): name of the file
+        Returns
+            Void (create a shapefile)
+        """
+        if export_format not in ("shp", "gpkg"):
+            raise Exception("Unsupported format")
+
+        export_geodata_as_file(
+            view=self,
+            db_cols=db_cols,
+            srid=self.srid,
+            data=data,
+            geom_col=self.geometry_field,
+            geojson_col=geojson_col,
+            dir_path=dir_path,
+            file_name=file_name,
+            export_format=export_format
         )
 
 
@@ -100,7 +133,6 @@ class GenericQueryGeo(GenericQuery):
             geometry_field=geometry_field,
             srid=srid
         )
-
 
     def as_geofeature(self):
 
