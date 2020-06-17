@@ -1,5 +1,4 @@
-utils-flask-sqlalchemy==0.1.0
-
+utils-flask-sqlalchemy==0.1.1
 fiona==1.8.13.post1
 geog==0.0.2
 geoalchemy2==0.4.0
