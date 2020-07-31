@@ -204,3 +204,69 @@ def geofileserializable(cls):
 
     cls.as_geofile = to_geofile_fn
     return cls
+
+
+def query_as_geojson(
+    session,
+    query,
+    id_col,
+    geom_col,
+    geom_srid=4326,
+    is_geojson=False,
+    keep_id_col=False
+):
+    """
+        Fonction qui permet de convertir une requete sql en geojson
+            En utilisant les fonctionnalités de serialisation de postresql
+
+        Parameters
+
+        session : Session sqlalchemy
+        query : requete au format Select
+        id_col : nom de la colonne identifiant (id du geojson)
+        geom_col (string): nom de la colonne géométrique
+        geom_srid (int): srid de la géométrie
+        is_geojson (boolean): Est-ce que la colonne géometrie est déjà un geojson
+        keep_id_col (boolean): Est-ce que les valeurs de la colonne id_col doit être concervée dans les properties
+
+        Returns:
+            FeatureCollection
+        """
+    if is_geojson:
+        q_geom = geom_col
+    else:
+        if geom_srid == 4326 :
+            q_geom = "ST_AsGeoJSON({})".format(geom_col)
+        else:
+            q_geom = "ST_AsGeoJSON(st_transform({}, 4326))".format(geom_col)
+    q_asgeojson = "{}::jsonb".format(q_geom)
+
+    q_rm_col = ["'" + geom_col + "'"]
+    if not keep_id_col:
+        q_rm_col.append("'" + id_col + "'")
+    statement = text("""
+        SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(feature)
+        ) as data
+        FROM (
+        SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         {id_col},
+            'geometry',   {q_asgeojson},
+            'properties', to_jsonb(row) - {q_rm_col}
+        ) AS feature
+        FROM (
+            {query}
+        ) row) features;
+    """.format(
+        id_col = id_col,
+        q_asgeojson = q_asgeojson,
+        q_rm_col = " - ".join(q_rm_col),
+        query = query.compile(compile_kwargs={"literal_binds": True})
+    ))
+
+    results = session.execute(statement)
+    for r in results:
+        return r[0]
+
