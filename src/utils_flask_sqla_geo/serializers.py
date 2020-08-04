@@ -1,9 +1,13 @@
 import datetime
 
-from geoalchemy2.shape import to_shape, from_shape
-from geojson import Feature, FeatureCollection
-from utils_flask_sqla.serializers import serializable
+from shapely import wkb
 from shapely.geometry import asShape
+
+from geojson import Feature, FeatureCollection
+
+from sqlalchemy.sql import text
+from sqlalchemy.dialects import postgresql
+from geoalchemy2.shape import to_shape, from_shape
 
 from utils_flask_sqla.serializers import serializable
 from utils_flask_sqla.errors import UtilsSqlaError
@@ -206,7 +210,101 @@ def geofileserializable(cls):
     return cls
 
 
-def query_as_geojson(
+def sqla_query_to_text(query):
+    """
+        Transformation d'une requete de type Select en sqlalchemy
+            en text
+
+        Parameters
+            query : requete au format Select sqlalchemy
+        Returns:
+            text : requete au format text
+    """
+    # Cas particulier intersection geographique => WKB
+    # Par défaut la valeur de l'intersection est égale à NULL
+    # https://github.com/geoalchemy/geoalchemy2/issues/151
+    params = {}
+    for k, v in query.compile().params.items():
+        if "ST_GeomFromWKB" in k and isinstance(v, memoryview):
+            params[k] = "'" + str(wkb.loads(bytes(v)).wkt) + "'"
+        else:
+            params[k] = v
+
+    strquery = (str(query.compile(dialect=postgresql.dialect())) % params)
+    strquery = strquery.replace("ST_GeomFromWKB", "ST_GeomFromText")
+    return strquery
+
+
+def txt_query_as_geojson(
+    session,
+    query,
+    id_col,
+    geom_col,
+    geom_srid=4326,
+    is_geojson=False,
+    keep_id_col=False
+):
+    """
+        Fonction qui permet de convertir une requete sql en geojson
+            En utilisant les fonctionnalités de serialisation de postresql
+
+        Parameters
+
+        session : Session sqlalchemy
+        query : requete au format text
+        id_col : nom de la colonne identifiant (id du geojson)
+        geom_col (string): nom de la colonne géométrique
+        geom_srid (int): srid de la géométrie
+        is_geojson (boolean): Est-ce que la colonne géometrie est déjà un geojson
+        keep_id_col (boolean): Est-ce que les valeurs de la colonne id_col doit être concervée dans les properties
+
+        Returns:
+            FeatureCollection
+        """
+
+    #  TODO add tests !!!!!
+
+    if is_geojson:
+        q_geom = geom_col
+    else:
+        if geom_srid == 4326:
+            q_geom = "ST_AsGeoJSON({})".format(geom_col)
+        else:
+            q_geom = "ST_AsGeoJSON(st_transform({}, 4326))".format(geom_col)
+    q_asgeojson = "{}::jsonb".format(q_geom)
+
+    q_rm_col = ["'" + geom_col + "'"]
+    if not keep_id_col:
+        q_rm_col.append("'" + id_col + "'")
+
+    statement = text("""
+        SELECT jsonb_build_object(
+            'type',     'FeatureCollection',
+            'features', jsonb_agg(feature)
+        ) as data
+        FROM (
+        SELECT jsonb_build_object(
+            'type',       'Feature',
+            'id',         {id_col},
+            'geometry',   {q_asgeojson},
+            'properties', to_jsonb(row) - {q_rm_col}
+        ) AS feature
+        FROM (
+            {query}
+        ) row) features;
+    """.format(
+        id_col=id_col,
+        q_asgeojson=q_asgeojson,
+        q_rm_col=" - ".join(q_rm_col),
+        query=query
+    ))
+
+    results = session.execute(statement)
+    for r in results:
+        return r[0]
+
+
+def sqla_query_to_geojson(
     session,
     query,
     id_col,
@@ -231,42 +329,15 @@ def query_as_geojson(
 
         Returns:
             FeatureCollection
-        """
-    if is_geojson:
-        q_geom = geom_col
-    else:
-        if geom_srid == 4326 :
-            q_geom = "ST_AsGeoJSON({})".format(geom_col)
-        else:
-            q_geom = "ST_AsGeoJSON(st_transform({}, 4326))".format(geom_col)
-    q_asgeojson = "{}::jsonb".format(q_geom)
+    """
 
-    q_rm_col = ["'" + geom_col + "'"]
-    if not keep_id_col:
-        q_rm_col.append("'" + id_col + "'")
-    statement = text("""
-        SELECT jsonb_build_object(
-            'type',     'FeatureCollection',
-            'features', jsonb_agg(feature)
-        ) as data
-        FROM (
-        SELECT jsonb_build_object(
-            'type',       'Feature',
-            'id',         {id_col},
-            'geometry',   {q_asgeojson},
-            'properties', to_jsonb(row) - {q_rm_col}
-        ) AS feature
-        FROM (
-            {query}
-        ) row) features;
-    """.format(
-        id_col = id_col,
-        q_asgeojson = q_asgeojson,
-        q_rm_col = " - ".join(q_rm_col),
-        query = query.compile(compile_kwargs={"literal_binds": True})
-    ))
-
-    results = session.execute(statement)
-    for r in results:
-        return r[0]
-
+    txt_query = sqla_query_to_text(query)
+    return txt_query_as_geojson(
+        session,
+        txt_query,
+        id_col,
+        geom_col,
+        geom_srid=geom_srid,
+        is_geojson=is_geojson,
+        keep_id_col=keep_id_col
+    )
