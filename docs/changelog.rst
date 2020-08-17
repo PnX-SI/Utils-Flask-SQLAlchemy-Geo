@@ -5,6 +5,11 @@ CHANGELOG
 0.1.1 (unreleased)
 ------------------
 
+**🚀 Nouveautés**
+
+* ajout d'un parametre `exclude` dans as_dict pour ne pas demander une propriété ou une relation
+
+
 **🐛 Corrections**
 
 * 
