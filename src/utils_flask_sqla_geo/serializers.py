@@ -63,7 +63,7 @@ def geoserializable(cls):
         )
         return feature
 
-    def populategeofn(self, geojson, col_geom_name="geom"):
+    def populategeofn(self, geojson, recursif=True, col_geom_name="geom"):
         '''
         Méthode qui initie les valeurs de l'objet SQLAlchemy à partir d'un geojson
 
@@ -82,7 +82,7 @@ def geoserializable(cls):
             )
 
         # set properties
-        self.from_dict(properties)
+        self.from_dict(properties, recursif=recursif)
 
         # voir si meilleure procédure pour mettre la geometrie en base
         shape = asShape(geometry)
