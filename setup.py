@@ -1,8 +1,7 @@
 # coding: utf-8
 
 # Do not import unicode_literals it generate an error when install module with pip
-from __future__ import (print_function,
-                        absolute_import, division)
+from __future__ import print_function, absolute_import, division
 
 import re
 import setuptools
@@ -15,24 +14,27 @@ def get_version(path="./VERSION"):
 
 
 setuptools.setup(
-    name='utils-flask-sqlalchemy-geo',
+    name="utils-flask-sqlalchemy-geo",
     version=get_version(),
     description="Python lib of tools for Flask and SQLAlchemy (extension geometry)",
     author="Les parcs nationaux de France",
-    url='https://github.com/PnX-SI/Utils-Flask-SQLAlchemy-Geo',
-    packages=setuptools.find_packages('src'),
-    package_dir={'': 'src'},
-    install_requires=list(open('requirements.txt', 'r')),
+    url="https://github.com/PnX-SI/Utils-Flask-SQLAlchemy-Geo",
+    packages=setuptools.find_packages("src"),
+    package_dir={"": "src"},
+    install_requires=list(open("requirements.txt", "r")),
+    setup_requires=["wheel"],
     include_package_data=True,
     zip_safe=False,
-    keywords='ww',
-    classifiers=['Development Status :: 1 - Planning',
-                 'Intended Audience :: Developers',
-                 'Natural Language :: English',
-                 'Programming Language :: Python :: 3.3',
-                 'Programming Language :: Python :: 3.4',
-                 'Programming Language :: Python :: 3.5',
-                 'Programming Language :: Python :: 3.6',
-                 'License :: OSI Approved :: GNU Affero General Public License v3',
-                 'Operating System :: OS Independent'],
+    keywords="ww",
+    classifiers=[
+        "Development Status :: 1 - Planning",
+        "Intended Audience :: Developers",
+        "Natural Language :: English",
+        "Programming Language :: Python :: 3.3",
+        "Programming Language :: Python :: 3.4",
+        "Programming Language :: Python :: 3.5",
+        "Programming Language :: Python :: 3.6",
+        "License :: OSI Approved :: GNU Affero General Public License v3",
+        "Operating System :: OS Independent",
+    ],
 )
