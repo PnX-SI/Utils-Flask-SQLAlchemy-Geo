@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+0.1.2 (2020-10-21)
+------------------
+
+**🐛 Corrections**
+
+* Mise à jour de la version de `utils-flask-sqlalchemy`
+
 0.1.1 (2020-10-17)
 ------------------
 
