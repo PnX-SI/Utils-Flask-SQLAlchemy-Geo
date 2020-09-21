@@ -2,13 +2,19 @@
 CHANGELOG
 =========
 
+0.1.2 (2020-10-21)
+------------------
+
+**🐛 Corrections**
+
+* Mise à jour de la version de `utils-flask-sqlalchemy`
+
 0.1.1 (2020-10-17)
 ------------------
 
 **🚀 Nouveautés**
 
-* Fonction pour générer du geojson à partir de PostgreSQL (https://github.com/PnX-SI/Utils-Flask-SQLAlchemy-Geo/issues/7)
-
+* Fonction pour générer du geojson à partir de PostgreSQL (#7)
 
 0.1.0 (2020-06-17)
 ------------------
