@@ -14,8 +14,7 @@ CHANGELOG
 
 **🚀 Nouveautés**
 
-* Fonction pour générer du geojson à partir de PostgreSQL (https://github.com/PnX-SI/Utils-Flask-SQLAlchemy-Geo/issues/7)
-
+* Fonction pour générer du geojson à partir de PostgreSQL (#7)
 
 0.1.0 (2020-06-17)
 ------------------
