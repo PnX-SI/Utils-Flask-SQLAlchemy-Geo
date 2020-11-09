@@ -42,8 +42,9 @@ FIONA_MAPPING = {
     "float": "float",
     "boolean": "str",
     "double_precision": "float",
+    "jsonb": "str",
+    "json": "str",
 }
-
 
 class FionaService(ABC):
     """
@@ -58,9 +59,7 @@ class FionaService(ABC):
     supported_type = ("shp", "gpkg")
 
     @classmethod
-    def create_fiona_properties(
-        cls, db_cols, srid, dir_path, file_name, col_mapping=None
-    ):
+    def create_fiona_properties(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
         """
         Create three shapefiles (point, line, polygon) with the attributes give by db_cols
         Parameters:
@@ -84,26 +83,18 @@ class FionaService(ABC):
         cls.shp_properties = OrderedDict()
         if col_mapping:
             for db_col in db_cols:
-                if not db_col.type.__class__.__name__ == "Geometry":
-                    cls.shp_properties.update(
-                        {
-                            col_mapping.get(db_col.key): FIONA_MAPPING.get(
-                                db_col.type.__class__.__name__.lower()
-                            )
-                        }
-                    )
-                    cls.columns.append(col_mapping.get(db_col.key))
+                cls.add_fiona_col_mapping(col_mapping.get(db_col.key), db_col)
         else:
             for db_col in db_cols:
-                if not db_col.type.__class__.__name__ == "Geometry":
-                    cls.shp_properties.update(
-                        {
-                            db_col.key: FIONA_MAPPING.get(
-                                db_col.type.__class__.__name__.lower()
-                            )
-                        }
-                    )
-                    cls.columns.append(db_col.key)
+                cls.add_fiona_col_mapping(db_col.key, db_col)
+
+    @classmethod
+    def add_fiona_col_mapping(cls, key, db_col):
+        if not db_col.type.__class__.__name__ == "Geometry":
+            cls.shp_properties.update(
+                {key: FIONA_MAPPING.get(db_col.type.__class__.__name__.lower(), "str")}
+            )
+            cls.columns.append(key)
 
     @classmethod
     def create_features_generic(cls, view, data, geom_col, geojson_col=None):
@@ -142,13 +133,13 @@ class FionaService(ABC):
     @classmethod
     def build_feature(cls, view, data, geo_colname, is_geojson):
         """
-            Fonction qui créer une feature au sens de fiona
+        Fonction qui créer une feature au sens de fiona
 
-            Parameters:
-                view (GenericTable): the GenericTable object
-                is_geojson (boolean): la geometrie est elle sous forme de geojson
-                data (Model) : SQLA model
-                geo_colname (string) : nom de la colonne contenant le geom
+        Parameters:
+            view (GenericTable): the GenericTable object
+            is_geojson (boolean): la geometrie est elle sous forme de geojson
+            data (Model) : SQLA model
+            geo_colname (string) : nom de la colonne contenant le geom
         """
         # Test if geom data exists
         if not hasattr(data, geo_colname):
@@ -236,13 +227,17 @@ class FionaGpkgService(FionaService):
         cls.filename_gpkg = cls.dir_path + "/" + cls.file_name + ".gpkg"
 
         cls.gpkg_file = fiona.open(
-            cls.filename_gpkg, "w", "GPKG", cls.gpkg_schema, crs=cls.source_crs,
+            cls.filename_gpkg,
+            "w",
+            "GPKG",
+            cls.gpkg_schema,
+            crs=cls.source_crs,
         )
 
     @classmethod
     def write_a_feature(cls, feature, geom_wkt):
         """
-            write a feature by checking the type of the shape given
+        write a feature by checking the type of the shape given
         """
         cls.gpkg_file.write(feature)
 
@@ -334,7 +329,7 @@ class FionaShapeService(FionaService):
     @classmethod
     def write_a_feature(cls, feature, geom_wkt):
         """
-            write a feature by checking the type of the shape given
+        write a feature by checking the type of the shape given
         """
         if isinstance(geom_wkt, Point):
             # Transform point as multipoint :
@@ -378,10 +373,12 @@ class FionaShapeService(FionaService):
 
         for shape_format in format_to_save:
             final_file_name = cls.dir_path + "/" + shape_format + "_" + cls.file_name
-            final_file_name = "{dir_path}/{shape_format}_{file_name}/{shape_format}_{file_name}".format(
-                dir_path=cls.dir_path,
-                shape_format=shape_format,
-                file_name=cls.file_name,
+            final_file_name = (
+                "{dir_path}/{shape_format}_{file_name}/{shape_format}_{file_name}".format(
+                    dir_path=cls.dir_path,
+                    shape_format=shape_format,
+                    file_name=cls.file_name,
+                )
             )
             extentions = ("dbf", "shx", "shp", "prj")
             for ext in extentions:
@@ -401,20 +398,18 @@ class FionaShapeService(FionaService):
         cls.polyline_shape.close()
 
 
-def create_shapes_generic(
-    view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
-):
+def create_shapes_generic(view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col):
     """
-        Export data in shape files (separated bu geometry type)
-        Parameters:
-            srid (int): epsg code
-            db_cols (list): columns from a SQLA model (model.__mapper__.c)
-            data (list): Array of SQLA model
-            dir_path (str): directory path
-            file_name (str): file of the shapefiles
-            geom_col (str): name of the WKB geometry column of the SQLA Model
-            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                               for performance reason its better to use geojson_col rather than geom_col
+    Export data in shape files (separated bu geometry type)
+    Parameters:
+        srid (int): epsg code
+        db_cols (list): columns from a SQLA model (model.__mapper__.c)
+        data (list): Array of SQLA model
+        dir_path (str): directory path
+        file_name (str): file of the shapefiles
+        geom_col (str): name of the WKB geometry column of the SQLA Model
+        geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                           for performance reason its better to use geojson_col rather than geom_col
     """
 
     FionaShapeService.create_shapes_struct(db_cols, srid, dir_path, file_name)
@@ -422,20 +417,18 @@ def create_shapes_generic(
     FionaShapeService.save_and_zip_shapefiles()
 
 
-def create_gpkg_generic(
-    view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
-):
+def create_gpkg_generic(view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col):
     """
-        Export data in gpkg file
-        Parameters:
-            srid (int): epsg code
-            db_cols (list): columns from a SQLA model (model.__mapper__.c)
-            data (list): Array of SQLA model
-            dir_path (str): directory path
-            file_name (str): file of the shapefiles
-            geom_col (str): name of the WKB geometry column of the SQLA Model
-            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                               for performance reason its better to use geojson_col rather than geom_col
+    Export data in gpkg file
+    Parameters:
+        srid (int): epsg code
+        db_cols (list): columns from a SQLA model (model.__mapper__.c)
+        data (list): Array of SQLA model
+        dir_path (str): directory path
+        file_name (str): file of the shapefiles
+        geom_col (str): name of the WKB geometry column of the SQLA Model
+        geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                           for performance reason its better to use geojson_col rather than geom_col
     """
 
     FionaGpkgService.create_fiona_struct(db_cols, srid, dir_path, file_name)
@@ -455,22 +448,20 @@ def export_geodata_as_file(
     export_format="gpkg",
 ):
     """
-        Generic export data
-        Parameters:
-            srid (int): epsg code
-            db_cols (list): columns from a SQLA model (model.__mapper__.c)
-            data (list): Array of SQLA model
-            dir_path (str): directory path
-            file_name (str): file of the shapefiles
-            geom_col (str): name of the WKB geometry column of the SQLA Model
-            geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
-                               for performance reason its better to use geojson_col rather than geom_col
-            export_format (str) : name of the exported format
+    Generic export data
+    Parameters:
+        srid (int): epsg code
+        db_cols (list): columns from a SQLA model (model.__mapper__.c)
+        data (list): Array of SQLA model
+        dir_path (str): directory path
+        file_name (str): file of the shapefiles
+        geom_col (str): name of the WKB geometry column of the SQLA Model
+        geojson_col (str): name of the geojson column if present. If None create the geojson from geom_col with shapely
+                           for performance reason its better to use geojson_col rather than geom_col
+        export_format (str) : name of the exported format
     """
     if export_format == "gpkg":
-        create_gpkg_generic(
-            view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
-        )
+        create_gpkg_generic(view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col)
     elif export_format == "shp":
         create_shapes_generic(
             view, srid, db_cols, data, dir_path, file_name, geom_col, geojson_col
@@ -569,4 +560,3 @@ def remove_third_dimension(geom):
         raise RuntimeError(
             "Currently this type of geometry is not supported: {}".format(type(geom))
         )
-
