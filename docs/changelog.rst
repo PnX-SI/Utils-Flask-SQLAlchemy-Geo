@@ -2,6 +2,17 @@
 CHANGELOG
 =========
 
+0.1.3 (2021-01-27)
+------------------
+
+**🚀 Nouveautés**
+
+* Ajout du support de la sérialisation pour les types `json` et `jsonb`
+
+**🐛 Corrections**
+
+Les dépendances du fichier requirements.txt ne sont plus fixé à une version
+
 0.1.2 (2020-10-21)
 ------------------
 
