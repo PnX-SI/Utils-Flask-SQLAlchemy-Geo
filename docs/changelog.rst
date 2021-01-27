@@ -7,11 +7,11 @@ CHANGELOG
 
 **🚀 Nouveautés**
 
-* Ajout du support de la sérialisation pour les types `json` et `jsonb`
+* Ajout du support de la sérialisation pour les types ``json`` et ``jsonb``
 
 **🐛 Corrections**
 
-Les dépendances du fichier requirements.txt ne sont plus fixé à une version
+* Les dépendances du fichier ``requirements.txt`` ne sont plus fixées à une version
 
 0.1.2 (2020-10-21)
 ------------------
