@@ -120,13 +120,17 @@ class FionaService(ABC):
         else:
             is_geojson = True
             geo_colname = geojson_col
+        features = []
+        
+        while 'batch not empty':  # equivalent of 'while True', but clearer
+            batch = data.fetchmany(50000)  # 50,000 rows at a time
 
-        for d in data:
-            try:
-                cls.build_feature(view, d, geo_colname, is_geojson)
-            except UtilsSqlaError as e:
-                # TODO raise error or warning ??
-                pass
+            if not batch:
+                break
+
+            print("batch")
+            features = [cls.build_feature(view, d, geo_colname, is_geojson) for d in batch]
+            cls.write_features(features)
 
         cls.close_files()
 
@@ -147,15 +151,16 @@ class FionaService(ABC):
         # Build geometry
         if is_geojson:
             geom = ast.literal_eval(getattr(data, geo_colname))
-
         else:
             geom = getattr(data, geo_colname)
 
         # Build feature
-        cls.create_feature(view.as_dict(data, columns=cls.columns), geom, is_geojson)
+        feature, geom_wtk = cls.create_feature(view.as_dict(data, columns=cls.columns), geom, is_geojson, False)
+        return feature
+
 
     @classmethod
-    def create_feature(cls, data, geom, is_geojson=False):
+    def create_feature(cls, data, geom, is_geojson=False, write=True):
         """
         Create and write feature (a record of the file) for WKB data
         by serializing an SQLAlchemy object
@@ -176,7 +181,10 @@ class FionaService(ABC):
                 geom_wkt = to_shape(geom)
                 geom_geojson = mapping(geom_wkt)
             feature = {"geometry": geom_geojson, "properties": data}
-            cls.write_a_feature(feature, geom_wkt)
+            if write:
+                cls.write_a_feature(feature, geom_wkt)
+            else:
+                return(feature, geom_wkt)
         except AssertionError:
             # TODO déplacer car le fichier est fermé à la moindre erreur
             cls.close_files()
@@ -233,6 +241,13 @@ class FionaGpkgService(FionaService):
             cls.gpkg_schema,
             crs=cls.source_crs,
         )
+
+    @classmethod
+    def write_features(cls, features):
+        """
+        write a feature by checking the type of the shape given
+        """
+        cls.gpkg_file.writerecords(features)
 
     @classmethod
     def write_a_feature(cls, feature, geom_wkt):
@@ -326,6 +341,9 @@ class FionaShapeService(FionaService):
     # TODO mark as deprecated
     create_shapes_struct = create_fiona_struct
 
+    @classmethod
+    def write_features(cls, data, geom_wkt):
+        pass
     @classmethod
     def write_a_feature(cls, feature, geom_wkt):
         """
