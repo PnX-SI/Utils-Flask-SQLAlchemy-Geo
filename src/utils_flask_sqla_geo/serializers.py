@@ -1,5 +1,8 @@
 import datetime
 
+from itertools import chain 
+from warnings import warn
+
 from shapely import wkb
 from shapely.geometry import asShape
 
@@ -31,7 +34,7 @@ def geoserializable(cls):
     cls = serializable(cls)
 
     def serializegeofn(
-        self, geoCol, idCol, recursif=False, columns=(), relationships=(), depth=None
+        self, geoCol, idCol, *args, **kwargs
     ):
         """
         Méthode qui renvoie les données de l'objet sous la forme
@@ -55,11 +58,12 @@ def geoserializable(cls):
         else:
             geometry = {"type": "Point", "coordinates": [0, 0]}
 
+
         feature = Feature(
             id=str(getattr(self, idCol)),
             geometry=geometry,
             properties=self.as_dict(
-                recursif, depth=depth, columns=columns, relationships=relationships),
+                *args, **kwargs),
         )
         return feature
 
@@ -106,7 +110,8 @@ def shapeserializable(cls):
         data=None,
         dir_path=None,
         file_name=None,
-        columns=None,
+        columns=[],
+        fields=[]
     ):
         """
         Class method to create 3 shapes from datas
@@ -122,14 +127,17 @@ def shapeserializable(cls):
         Returns:
             void
         """
+        fields = chain(fields, columns)
         if not data:
             data = []
-
+        if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
 
-        if columns:
+        if fields:
             db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in fields
             ]
         else:
             db_cols = cls.__mapper__.c
@@ -138,7 +146,7 @@ def shapeserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(columns)
+            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
             FionaShapeService.create_feature(d, geom)
 
@@ -159,7 +167,8 @@ def geofileserializable(cls):
         data=None,
         dir_path=None,
         file_name=None,
-        columns=None,
+        columns=[],
+        fields=[]
     ):
         """
         Class method to create 3 shapes from datas
@@ -178,15 +187,18 @@ def geofileserializable(cls):
         if export_format not in ("shp", "gpkg"):
             raise Exception("Unsupported format")
 
-
+        fields = chain(columns, fields)
         if not data:
             data = []
 
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
-
+        
         if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
+        if fields:
             db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in fields
             ]
         else:
             db_cols = cls.__mapper__.c
@@ -200,7 +212,7 @@ def geofileserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(columns)
+            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
             fionaService.create_feature(d, geom)
 
