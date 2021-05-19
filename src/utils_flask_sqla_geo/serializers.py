@@ -1,5 +1,6 @@
 import datetime
-from itertools import chain
+from itertools import chain 
+from warnings import warn
 
 from shapely import wkb
 from shapely.geometry import asShape
@@ -127,7 +128,8 @@ def shapeserializable(cls):
         data=None,
         dir_path=None,
         file_name=None,
-        columns=None,
+        columns=[],
+        fields=[]
     ):
         """
         Class method to create 3 shapes from datas
@@ -145,12 +147,15 @@ def shapeserializable(cls):
         """
         if not data:
             data = []
-
+        if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
+            fields = chain(fields, columns)
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
 
-        if columns:
+        if fields:
             db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in fields
             ]
         else:
             db_cols = cls.__mapper__.c
@@ -159,7 +164,7 @@ def shapeserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(columns)
+            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
             FionaShapeService.create_feature(d, geom)
 
@@ -180,7 +185,8 @@ def geofileserializable(cls):
         data=None,
         dir_path=None,
         file_name=None,
-        columns=None,
+        columns=[],
+        fields=[]
     ):
         """
         Class method to create 3 shapes from datas
@@ -199,15 +205,18 @@ def geofileserializable(cls):
         if export_format not in ("shp", "gpkg"):
             raise Exception("Unsupported format")
 
-
         if not data:
             data = []
 
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
-
+        
         if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
+            fields = chain(columns, fields)
+        if fields:
             db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in fields
             ]
         else:
             db_cols = cls.__mapper__.c
@@ -221,7 +230,7 @@ def geofileserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(columns)
+            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
             fionaService.create_feature(d, geom)
 
