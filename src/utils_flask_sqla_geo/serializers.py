@@ -41,7 +41,7 @@ def get_geoserializable_decorator(geoCol=None, idCol=None, **kwargs):
         geom_exclude = [ key
                          for key, col in mapper.columns.items()
                          if isinstance(col.type,  Geometry) ]
-        kwargs['exclude'] = chain(geom_exclude, exclude)
+        kwargs['exclude'] = list(chain(geom_exclude, exclude))
         cls = serializable(**kwargs)(cls)
 
         def serializegeofn(self, geoCol=None, idCol=None, *args, **kwargs):
