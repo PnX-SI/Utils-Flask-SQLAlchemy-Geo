@@ -3,3 +3,4 @@ geoalchemy2>=0.4.0
 geog>=0.0.2
 shapely>=1.5.16
 utils-flask-sqlalchemy>=0.1.2
+geojson
