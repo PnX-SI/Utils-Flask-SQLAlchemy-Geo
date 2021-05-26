@@ -150,8 +150,10 @@ def shapeserializable(cls):
         if columns:
             warn("'columns' argument is deprecated. Please add columns to serialize "
                     "directly in 'fields' argument.", DeprecationWarning)
-            fields = list(chain(fields, columns))
+            fields = chain(fields, columns)
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
+
+        fields = list(fields)
 
         if fields:
             db_cols = [
@@ -213,7 +215,10 @@ def geofileserializable(cls):
         if columns:
             warn("'columns' argument is deprecated. Please add columns to serialize "
                     "directly in 'fields' argument.", DeprecationWarning)
-            fields = list(chain(columns, fields))
+            fields = chain(columns, fields)
+
+        fields = list(fields)
+
         if fields:
             db_cols = [
                 db_col for db_col in fields in cls.__mapper__.c if db_col.key in fields
