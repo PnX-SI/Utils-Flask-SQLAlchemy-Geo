@@ -1,4 +1,6 @@
 import datetime
+from itertools import chain 
+from warnings import warn
 
 from shapely import wkb
 from shapely.geometry import asShape
@@ -7,6 +9,8 @@ from geojson import Feature, FeatureCollection
 
 from sqlalchemy.sql import text
 from sqlalchemy.dialects import postgresql
+from sqlalchemy import inspect
+from geoalchemy2 import Geometry
 from geoalchemy2.shape import to_shape, from_shape
 
 from utils_flask_sqla.serializers import serializable
@@ -19,81 +23,99 @@ from .utilsgeometry import (
 )
 
 
-def geoserializable(cls):
+def get_geoserializable_decorator(geoCol=None, idCol=None, **kwargs):
     """
         Décorateur de classe
         Permet de rajouter la fonction as_geofeature à une classe
     """
+    defaultGeoCol = geoCol
+    defaultIdCol = idCol
 
-    # par defaut un geoserializable est aussi un serializable
-    # pas besoin de deux decorateurs
+    def _geoserializable(cls):
 
-    cls = serializable(cls)
+        # par defaut un geoserializable est aussi un serializable
+        # pas besoin de deux decorateurs
 
-    def serializegeofn(
-        self, geoCol, idCol, recursif=False, columns=(), relationships=(), depth=None
-    ):
-        """
-        Méthode qui renvoie les données de l'objet sous la forme
-        d'une Feature geojson
+        mapper = inspect(cls)
 
-        Parameters
-        ----------
-           geoCol: string
-            Nom de la colonne géométrie
-           idCol: string
-            Nom de la colonne primary key
-           recursif: boolean
-            Spécifie si on veut que les sous objet (relationship) soit
-            également sérialisé
-           columns: liste
-            liste des columns qui doivent être prisent en compte
-        """
+        exclude = kwargs.get('exclude', [])
+        geom_exclude = [ key
+                         for key, col in mapper.columns.items()
+                         if isinstance(col.type,  Geometry) ]
+        kwargs['exclude'] = list(chain(geom_exclude, exclude))
+        cls = serializable(**kwargs)(cls)
 
-        if not getattr(self, geoCol) is None:
-            geometry = to_shape(getattr(self, geoCol))
-        else:
-            geometry = {"type": "Point", "coordinates": [0, 0]}
+        def serializegeofn(self, geoCol=None, idCol=None, *args, **kwargs):
+            """
+            Méthode qui renvoie les données de l'objet sous la forme
+            d'une Feature geojson
 
-        feature = Feature(
-            id=str(getattr(self, idCol)),
-            geometry=geometry,
-            properties=self.as_dict(
-                recursif, depth=depth, columns=columns, relationships=relationships),
-        )
-        return feature
+            Parameters
+            ----------
+               geoCol: string
+                Nom de la colonne géométrie
+               idCol: string
+                Nom de la colonne primary key
 
-    def populategeofn(self, geojson, recursif=True, col_geom_name="geom"):
-        '''
-        Méthode qui initie les valeurs de l'objet SQLAlchemy à partir d'un geojson
+            Pour les autres paramètres, voir la doc de @serializable
+            """
+            if geoCol is None:
+                geoCol = defaultGeoCol
+            if idCol is None:
+                idCol = defaultIdCol
 
-        Parameters
-        ----------
-            geojfeature_in : dictionnaire contenant les valeurs à passer à l'objet
-        '''
+            if not getattr(self, geoCol) is None:
+                geometry = to_shape(getattr(self, geoCol))
+            else:
+                geometry = {"type": "Point", "coordinates": [0, 0]}
 
-        typeg = geojson.get('type')
-        properties = geojson.get('properties')
-        geometry = geojson.get('geometry')
-
-        if not properties or not geometry or typeg != "Feature":
-            raise UtilsSqlaError(
-                "Input must be a geofeature"
+            feature = Feature(
+                id=str(getattr(self, idCol)),
+                geometry=geometry,
+                properties=self.as_dict(*args, **kwargs),
             )
+            return feature
 
-        # set properties
-        self.from_dict(properties, recursif=recursif)
+        def populategeofn(self, geojson, recursif=True, col_geom_name="geom"):
+            '''
+            Méthode qui initie les valeurs de l'objet SQLAlchemy à partir d'un geojson
 
-        # voir si meilleure procédure pour mettre la geometrie en base
-        shape = asShape(geometry)
-        two_dimension_geom = remove_third_dimension(shape)
-        geom = from_shape(two_dimension_geom, srid=4326)
-        setattr(self, col_geom_name, geom)
+            Parameters
+            ----------
+                geojfeature_in : dictionnaire contenant les valeurs à passer à l'objet
+            '''
 
-    cls.as_geofeature = serializegeofn
-    cls.from_geofeature = populategeofn
+            typeg = geojson.get('type')
+            properties = geojson.get('properties')
+            geometry = geojson.get('geometry')
 
-    return cls
+            if not properties or not geometry or typeg != "Feature":
+                raise UtilsSqlaError(
+                    "Input must be a geofeature"
+                )
+
+            # set properties
+            self.from_dict(properties, recursif=recursif)
+
+            # voir si meilleure procédure pour mettre la geometrie en base
+            shape = asShape(geometry)
+            two_dimension_geom = remove_third_dimension(shape)
+            geom = from_shape(two_dimension_geom, srid=4326)
+            setattr(self, col_geom_name, geom)
+
+        cls.as_geofeature = serializegeofn
+        cls.from_geofeature = populategeofn
+
+        return cls
+
+    return _geoserializable
+
+
+def geoserializable(*args, **kwargs):
+    if not kwargs and len(args) == 1 and isinstance(args[0], type):  # e.g. @geoserializable
+        return get_geoserializable_decorator()(args[0])
+    else:
+        return get_geoserializable_decorator(*args, **kwargs)  # e.g. @geoserializable(idCol='geom')
 
 
 def shapeserializable(cls):
@@ -106,7 +128,8 @@ def shapeserializable(cls):
         data=None,
         dir_path=None,
         file_name=None,
-        columns=None,
+        columns=[],
+        fields=[]
     ):
         """
         Class method to create 3 shapes from datas
@@ -124,12 +147,17 @@ def shapeserializable(cls):
         """
         if not data:
             data = []
-
+        if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
+            fields = chain(fields, columns)
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
 
-        if columns:
+        fields = list(fields)
+
+        if fields:
             db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+                db_col for db_col in fields in cls.__mapper__.c if db_col.key in fields
             ]
         else:
             db_cols = cls.__mapper__.c
@@ -138,7 +166,7 @@ def shapeserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(columns)
+            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
             FionaShapeService.create_feature(d, geom)
 
@@ -159,7 +187,8 @@ def geofileserializable(cls):
         data=None,
         dir_path=None,
         file_name=None,
-        columns=None,
+        columns=[],
+        fields=[]
     ):
         """
         Class method to create 3 shapes from datas
@@ -178,15 +207,21 @@ def geofileserializable(cls):
         if export_format not in ("shp", "gpkg"):
             raise Exception("Unsupported format")
 
-
         if not data:
             data = []
 
         file_name = file_name or datetime.datetime.now().strftime("%Y_%m_%d_%Hh%Mm%S")
-
+        
         if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
+            fields = chain(columns, fields)
+
+        fields = list(fields)
+
+        if fields:
             db_cols = [
-                db_col for db_col in db_col in cls.__mapper__.c if db_col.key in columns
+                db_col for db_col in fields in cls.__mapper__.c if db_col.key in fields
             ]
         else:
             db_cols = cls.__mapper__.c
@@ -200,7 +235,7 @@ def geofileserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(columns)
+            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
             fionaService.create_feature(d, geom)
 
