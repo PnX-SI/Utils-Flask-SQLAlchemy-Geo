@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+0.2.1 (2021-06-21)
+------------------
+
+**🐛 Corrections**
+
+* Ajout du paramètre fields sur la fonction "générique"`as_geofeature`
+
 0.2.0 (2021-05-27)
 ------------------
 
