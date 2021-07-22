@@ -1,3 +1,6 @@
+from itertools import chain
+from warnings import warn
+
 from geojson import Feature, FeatureCollection
 from geoalchemy2.shape import to_shape
 from utils_flask_sqla.generic import GenericQuery, GenericTable
@@ -39,10 +42,14 @@ class GenericTableGeo(GenericTable):
         self.geometry_field = geometry_field
         self.srid = srid
 
-    def as_geofeature(self, data, columns=None):
+    def as_geofeature(self, data, columns=[], fields=[]):
+        fields = list(chain(fields, columns))
+        if columns:
+            warn("'columns' argument is deprecated. Please add columns to serialize "
+                    "directly in 'fields' argument.", DeprecationWarning)
         if getattr(data, self.geometry_field) is not None:
             geometry = to_shape(getattr(data, self.geometry_field))
-            return Feature(geometry=geometry, properties=self.as_dict(data, columns))
+            return Feature(geometry=geometry, properties=self.as_dict(data, fields))
 
     def as_shape(
         self, db_cols, geojson_col=None, data=[], dir_path=None, file_name=None
