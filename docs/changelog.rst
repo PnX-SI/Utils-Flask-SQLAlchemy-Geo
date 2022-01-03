@@ -2,6 +2,13 @@
 CHANGELOG
 =========
 
+0.2.2 (2022-01-03)
+------------------
+
+**🚀 Nouveautés**
+
+* Ajout de ``GeoFeatureCollectionMixin`` définissant la fonction ``as_geofeaturecollection``
+
 0.2.1 (2021-07-22)
 ------------------
 
