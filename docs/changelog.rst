@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+0.2.3 (2022-08-03)
+------------------
+
+**🐛 Corrections**
+
+* Correction des dépendances : ``SQLAlchemy<1.4``, ``geoalchemy2<0.12``
+
+
 0.2.2 (2022-01-03)
 ------------------
 
