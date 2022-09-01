@@ -2,12 +2,22 @@
 CHANGELOG
 =========
 
+0.2.5 (2022-09-01)
+------------------
+
+**🚀 Nouveautés**
+
+* Suppression de la fonction ``circle_from_point``
+* Suppression de ``geog`` des dépendances
+
+
 0.2.4 (2022-08-04)
 ------------------
 
 **🐛 Corrections**
 
 * Compatibilité Python 3.7 : ``numpy<1.22``
+
 
 0.2.3 (2022-08-03)
 ------------------
