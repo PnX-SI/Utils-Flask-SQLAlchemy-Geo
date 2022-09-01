@@ -3,8 +3,6 @@ import ast
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
-import numpy as np
-import geog
 import zipfile
 import fiona
 
@@ -469,20 +467,6 @@ def export_geodata_as_file(
     else:
         # TODO raise ERROR unsupported format
         pass
-
-
-def circle_from_point(point, radius, nb_point=20):
-    """
-    return a circle (shapely POLYGON) from a point
-    parameters:
-        - point: a shapely POINT
-        - radius: circle's diameter in meter
-        - nb_point: nb of point of the polygo,
-
-    """
-    angles = np.linspace(0, 360, nb_point)
-    polygon = geog.propagate(point, angles, radius)
-    return Polygon(polygon)
 
 
 def convert_to_2d(geojson):
