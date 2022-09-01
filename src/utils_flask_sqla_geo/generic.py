@@ -8,7 +8,7 @@ from .utilsgeometry import create_shapes_generic, export_geodata_as_file
 
 
 def get_geojson_feature(wkb):
-    """ retourne une feature geojson à partir d'un WKB"""
+    """retourne une feature geojson à partir d'un WKB"""
     geometry = to_shape(wkb)
     feature = Feature(geometry=geometry, properties={})
     return feature
@@ -16,9 +16,9 @@ def get_geojson_feature(wkb):
 
 class GenericTableGeo(GenericTable):
     """
-        Classe permettant de créer à la volée un mapping
-            d'une vue avec la base de données par rétroingénierie
-            gère les géométries
+    Classe permettant de créer à la volée un mapping
+        d'une vue avec la base de données par rétroingénierie
+        gère les géométries
     """
 
     def __init__(self, tableName, schemaName, engine, geometry_field=None, srid=None):
@@ -27,17 +27,10 @@ class GenericTableGeo(GenericTable):
 
         if geometry_field:
             try:
-                if (
-                    not self.tableDef.columns[geometry_field].type.__class__.__name__
-                    == "Geometry"
-                ):
-                    raise TypeError(
-                        "field {} is not a geometry column".format(
-                            geometry_field)
-                    )
+                if not self.tableDef.columns[geometry_field].type.__class__.__name__ == "Geometry":
+                    raise TypeError("field {} is not a geometry column".format(geometry_field))
             except KeyError:
-                raise KeyError(
-                    "field {} doesn't exists".format(geometry_field))
+                raise KeyError("field {} doesn't exists".format(geometry_field))
 
         self.geometry_field = geometry_field
         self.srid = srid
@@ -45,15 +38,16 @@ class GenericTableGeo(GenericTable):
     def as_geofeature(self, data, columns=[], fields=[]):
         fields = list(chain(fields, columns))
         if columns:
-            warn("'columns' argument is deprecated. Please add columns to serialize "
-                    "directly in 'fields' argument.", DeprecationWarning)
+            warn(
+                "'columns' argument is deprecated. Please add columns to serialize "
+                "directly in 'fields' argument.",
+                DeprecationWarning,
+            )
         if getattr(data, self.geometry_field) is not None:
             geometry = to_shape(getattr(data, self.geometry_field))
             return Feature(geometry=geometry, properties=self.as_dict(data, fields))
 
-    def as_shape(
-        self, db_cols, geojson_col=None, data=[], dir_path=None, file_name=None
-    ):
+    def as_shape(self, db_cols, geojson_col=None, data=[], dir_path=None, file_name=None):
         """
         # RMQ Pour le moment conservé pour des questions de rétrocompatibilité
 
@@ -108,14 +102,14 @@ class GenericTableGeo(GenericTable):
             geojson_col=geojson_col,
             dir_path=dir_path,
             file_name=file_name,
-            export_format=export_format
+            export_format=export_format,
         )
 
 
 class GenericQueryGeo(GenericQuery):
     """
-        Classe permettant de manipuler des objets GenericTable
-        gère les géométries
+    Classe permettant de manipuler des objets GenericTable
+    gère les géométries
     """
 
     def __init__(
@@ -127,7 +121,7 @@ class GenericQueryGeo(GenericQuery):
         limit=100,
         offset=0,
         geometry_field=None,
-        srid=None
+        srid=None,
     ):
 
         super().__init__(DB, tableName, schemaName, filters, limit, offset)
@@ -138,7 +132,7 @@ class GenericQueryGeo(GenericQuery):
             schemaName=schemaName,
             engine=DB.engine,
             geometry_field=geometry_field,
-            srid=srid
+            srid=srid,
         )
 
     def as_geofeature(self):

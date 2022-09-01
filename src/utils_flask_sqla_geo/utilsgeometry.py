@@ -44,6 +44,7 @@ FIONA_MAPPING = {
     "json": "str",
 }
 
+
 class FionaService(ABC):
     """
     Abstract class to provide functions to create geofiles with Fiona
