@@ -5,6 +5,8 @@ from collections import OrderedDict
 
 import zipfile
 import fiona
+import logging
+import json
 
 from fiona.crs import from_epsg
 from geoalchemy2.shape import to_shape
@@ -43,6 +45,8 @@ FIONA_MAPPING = {
     "jsonb": "str",
     "json": "str",
 }
+
+log = logging.getLogger()
 
 
 class FionaService(ABC):
@@ -124,8 +128,7 @@ class FionaService(ABC):
             try:
                 cls.build_feature(view, d, geo_colname, is_geojson)
             except UtilsSqlaError as e:
-                # TODO raise error or warning ??
-                pass
+                log.error(e)
 
         cls.close_files()
 
@@ -141,11 +144,13 @@ class FionaService(ABC):
             geo_colname (string) : nom de la colonne contenant le geom
         """
         # Test if geom data exists
-        if not hasattr(data, geo_colname):
-            raise UtilsSqlaError("Cannot create a shapefile record whithout a Geometry")
+        if not hasattr(data, geo_colname) or getattr(data, geo_colname) is None:
+            raise UtilsSqlaError(
+                "Cannot create a shapefile record whithout a geometry column or with an None geometry"
+            )
         # Build geometry
         if is_geojson:
-            geom = ast.literal_eval(getattr(data, geo_colname))
+            geom = json.loads(getattr(data, geo_colname))
 
         else:
             geom = getattr(data, geo_colname)
