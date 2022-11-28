@@ -266,13 +266,15 @@ class FionaShapeService(FionaService):
     Service to create shapefiles from sqlalchemy models
 
     How to use:
-    FionaShapeService.create_shapes_struct(**args)
+    FionaShapeService.create_fiona_struct(**args)
     FionaShapeService.create_features(**args)
-    FionaShapeService.save_and_zip_shapefiles()
+    FionaShapeService.save_files()
     """
 
     @classmethod
-    def create_fiona_struct(cls, db_cols, srid, dir_path, file_name, col_mapping=None):
+    def create_fiona_struct(
+        cls, db_cols, srid, dir_path, file_name, col_mapping=None, encoding="utf-8"
+    ):
         """
         Create three shapefiles (point, line, polygon) with the attributes give by db_cols
         Parameters:
@@ -281,6 +283,8 @@ class FionaShapeService(FionaService):
             dir_path (str): directory path
             file_name (str): file of the shapefiles
             col_mapping (dict): mapping between SQLA class attributes and 'beatifiul' columns name
+            encoding (str): define encoding of data to store in Shape. Default: utf-8.
+
 
         Returns:
             void
@@ -310,10 +314,20 @@ class FionaShapeService(FionaService):
         cls.polygon_feature = False
         cls.polyline_feature = False
         cls.point_shape = fiona.open(
-            cls.file_point, "w", "ESRI Shapefile", cls.point_schema, crs=cls.source_crs
+            cls.file_point,
+            "w",
+            "ESRI Shapefile",
+            cls.point_schema,
+            crs=cls.source_crs,
+            encoding=encoding,
         )
         cls.polygone_shape = fiona.open(
-            cls.file_poly, "w", "ESRI Shapefile", cls.polygon_schema, crs=cls.source_crs
+            cls.file_poly,
+            "w",
+            "ESRI Shapefile",
+            cls.polygon_schema,
+            crs=cls.source_crs,
+            encoding=encoding,
         )
         cls.polyline_shape = fiona.open(
             cls.file_line,
@@ -321,6 +335,7 @@ class FionaShapeService(FionaService):
             "ESRI Shapefile",
             cls.polyline_schema,
             crs=cls.source_crs,
+            encoding=encoding,
         )
 
     # TODO mark as deprecated
