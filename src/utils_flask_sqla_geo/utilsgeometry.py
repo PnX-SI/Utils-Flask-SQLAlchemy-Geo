@@ -128,7 +128,7 @@ class FionaService(ABC):
             try:
                 cls.build_feature(view, d, geo_colname, is_geojson)
             except UtilsSqlaError as e:
-                log.error(e)
+                log.exception(f"Can not build feature for geo column {geo_colname}")
 
         cls.close_files()
 
