@@ -2,6 +2,19 @@
 CHANGELOG
 =========
 
+0.2.6 (2022-12-12)
+------------------
+
+**🚀 Nouveautés**
+
+* Code formatté avec Black. Une Github Action y veille.
+* Possibilité de spécifier l’encodage des fichiers Shape générés (#11)
+
+**🐛 Corrections**
+
+* Correction de la gestion des géométries nulles lors de la génération d’un fichier Shape.
+
+
 0.2.5 (2022-09-01)
 ------------------
 
