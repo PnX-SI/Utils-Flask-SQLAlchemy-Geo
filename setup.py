@@ -23,6 +23,11 @@ setuptools.setup(
     packages=setuptools.find_packages("src"),
     package_dir={"": "src"},
     install_requires=requirements,
+    extras_require={
+        "tests": [
+            "pytest",
+        ],
+    },
     setup_requires=["wheel"],
     classifiers=[
         "Development Status :: 1 - Planning",
