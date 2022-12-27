@@ -3,4 +3,6 @@ fiona>=1.8.13.post1
 geoalchemy2>=0.4.0,<0.12
 shapely>=1.5.16,<2.0.0
 utils-flask-sqlalchemy>=0.2.0
+marshmallow_sqlalchemy
+marshmallow_geojson
 geojson
