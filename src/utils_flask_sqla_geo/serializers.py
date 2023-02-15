@@ -28,7 +28,6 @@ def get_geoserializable_decorator(geoCol=None, idCol=None, **kwargs):
     defaultIdCol = idCol
 
     def _geoserializable(cls):
-
         # par defaut un geoserializable est aussi un serializable
         # pas besoin de deux decorateurs
 

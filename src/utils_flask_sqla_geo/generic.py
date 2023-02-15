@@ -22,7 +22,6 @@ class GenericTableGeo(GenericTable):
     """
 
     def __init__(self, tableName, schemaName, engine, geometry_field=None, srid=None):
-
         super().__init__(tableName, schemaName, engine)
 
         if geometry_field:
@@ -123,7 +122,6 @@ class GenericQueryGeo(GenericQuery):
         geometry_field=None,
         srid=None,
     ):
-
         super().__init__(DB, tableName, schemaName, filters, limit, offset)
 
         self.geometry_field = geometry_field
@@ -136,7 +134,6 @@ class GenericQueryGeo(GenericQuery):
         )
 
     def as_geofeature(self):
-
         data, nb_result_without_filter, nb_results = self.query()
 
         if self.geometry_field:
