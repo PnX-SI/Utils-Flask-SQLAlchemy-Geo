@@ -26,6 +26,7 @@ setuptools.setup(
     extras_require={
         "tests": [
             "pytest",
+            "flask-sqlalchemy",
         ],
     },
     setup_requires=["wheel"],
