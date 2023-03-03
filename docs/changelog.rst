@@ -2,6 +2,21 @@
 CHANGELOG
 =========
 
+0.2.7 (2023-03-03)
+------------------
+
+**🚀 Nouveautés**
+
+* Ajout du schéma ``GeoAlchemyAutoSchema`` permettant la sérialisation de modèle contenant des colonnes géographiques en GeoJSON
+* Ajout de l’utilitaire ``geojsonify`` similaire à ``flask.jsonify`` mais définisant un ``Content-Type`` ``application/geo+json``
+* Compatibilité SQLAlchemy 1.4 / Flask-SQLAlchemy 2
+* Intégration continue avec ``pytest``
+
+**🐛 Corrections**
+
+* Correction des dépendances : ``shapely<2``
+
+
 0.2.6 (2022-12-12)
 ------------------
 
