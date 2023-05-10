@@ -20,6 +20,8 @@ from marshmallow_geojson import (
 )
 from shapely.geometry import shape
 
+from .utils import JsonifiableGenerator, GeneratorField
+
 
 class GeometrySchema(Schema):
     schema_map = {
@@ -49,7 +51,7 @@ class FeatureSchema(Schema):
 
 class FeatureCollectionSchema(Schema):
     type = fields.Constant("FeatureCollection", required=True)
-    features = fields.List(fields.Nested(FeatureSchema), required=True)
+    features = GeneratorField(fields.Nested(FeatureSchema), required=True)
 
 
 class GeometryField(fields.Field):
@@ -170,16 +172,32 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
         properties[self.opts.feature_geometry] = feature["geometry"]
         return properties
 
+    def _serialize(self, obj, *, many=None):
+        if many:
+            result = map(
+                lambda o: super(GeoAlchemyAutoSchema, self)._serialize(o, many=False), obj
+            )
+            if isinstance(obj, list):
+                return list(result)
+            else:
+                return result
+        else:
+            result = super(GeoAlchemyAutoSchema, self)._serialize(obj, many=False)
+            return result
+
     @post_dump(pass_many=True)
     def to_geojson(self, data, many, **kwargs):
         if self.as_geojson:
             if many:
-                return FeatureCollectionSchema().dump(
-                    {"features": [self.to_feature(props) for props in data]}
-                )
+                features = map(self.to_feature, data)
+                if isinstance(data, list):
+                    features = list(features)
+                return FeatureCollectionSchema().dump({"features": features})
             else:
                 return FeatureSchema().dump(self.to_feature(data))
         else:
+            if many and not isinstance(data, list):
+                data = JsonifiableGenerator(data)
             return data
 
     @pre_load(pass_many=True)
