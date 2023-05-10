@@ -1,4 +1,7 @@
 import pytest
+import json
+from json import JSONEncoder
+import re
 
 import marshmallow as ma
 from marshmallow.exceptions import ValidationError
@@ -431,3 +434,57 @@ class TestGeoSchema:
         }
         assert schema1.dump(b) == expected
         assert schema2.dump(b) == expected
+
+    def test_generator_json(self):
+        def generate_objects():
+            for i in range(3):
+                generate_objects.count += 1
+                yield Parent(pk=i, name=f"Object {i}")
+
+        generate_objects.count = 0
+
+        schema = ParentSchema(as_geojson=False)
+
+        d = schema.dump(generate_objects(), many=True)
+        assert generate_objects.count == 0
+
+        r = re.compile(r'"Object (\d+)"')
+        result = ""
+        for s in JSONEncoder().iterencode(d):
+            g = r.match(s)
+            if g:
+                i = int(g.group(1))
+                assert generate_objects.count == i + 1
+            result += s
+
+        # Verify json-string generated with iterencode is correct
+        d = json.loads(result)
+        expected = schema.dump(list(generate_objects()), many=True)
+        assert d == expected
+
+    def test_generator_geojson(self):
+        def generate_objects():
+            for i in range(3):
+                generate_objects.count += 1
+                yield Parent(pk=i, name=f"Object {i}")
+
+        generate_objects.count = 0
+
+        schema = ParentSchema(as_geojson=True)
+
+        d = schema.dump(generate_objects(), many=True)
+        assert generate_objects.count == 0
+
+        r = re.compile(r'"Object (\d+)"')
+        result = ""
+        for s in JSONEncoder().iterencode(d):
+            g = r.match(s)
+            if g:
+                i = int(g.group(1))
+                assert generate_objects.count == i + 1
+            result += s
+
+        # Verify json-string generated with iterencode is correct
+        d = json.loads(result)
+        expected = schema.dump(list(generate_objects()), many=True)
+        assert d == expected
