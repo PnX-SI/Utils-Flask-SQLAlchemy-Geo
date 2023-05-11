@@ -1,9 +1,13 @@
 from itertools import chain
+from typing import Union
 from warnings import warn
 
-from geojson import Feature, FeatureCollection
 from geoalchemy2.shape import to_shape
+from geojson import Feature, FeatureCollection
 from utils_flask_sqla.generic import GenericQuery, GenericTable
+from utils_flask_sqla.schema import SmartRelationshipsMixin
+
+from .schema import GeoAlchemyAutoSchema
 from .utilsgeometry import create_shapes_generic, export_geodata_as_file
 
 
@@ -154,3 +158,51 @@ class GenericQueryGeo(GenericQuery):
             "limit": self.limit,
             "items": results,
         }
+
+    def get_model(self, pk_name: Union[str, None] = None):
+        """
+        renvoie le modèle associé à la table
+        """
+
+        if pk_name is None:
+            pk_name = str(self.view.tableDef.columns.keys()[0])
+
+        if not hasattr(self.view.tableDef.c, pk_name):
+            raise Exception(f"{pk_name} cannot be found in table")
+
+        dict_model = {
+            "__table__": self.view.tableDef,
+            "__mapper_args__": {"primary_key": getattr(self.view.tableDef.c, pk_name)},
+        }
+
+        Model = type("Model", (self.DB.Model,), dict_model)
+
+        return Model
+
+    def get_marshmallow_schema(self, pk_name: Union[str, None] = None):
+        """
+        renvoie un marshmalow schema à partir d'un modèle
+        ce schema hérite des classes GeoAlchemyAutoSchema et SmartRelationshipsMixin
+
+        TODO (à déplacer dans les lib utils sqla)
+        """
+        Meta = type(
+            "Meta",
+            (),
+            {
+                "model": self.get_model(pk_name),
+                "load_instance": True,
+            },
+        )
+        dict_schema = {
+            "Meta": Meta,
+        }
+
+        return type(
+            "Schema",
+            (
+                GeoAlchemyAutoSchema,
+                SmartRelationshipsMixin,
+            ),
+            dict_schema,
+        )
