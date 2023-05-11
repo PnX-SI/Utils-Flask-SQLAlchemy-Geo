@@ -201,8 +201,8 @@ class GenericQueryGeo(GenericQuery):
         return type(
             "Schema",
             (
-                GeoAlchemyAutoSchema,
                 SmartRelationshipsMixin,
+                GeoAlchemyAutoSchema,
             ),
             dict_schema,
         )
