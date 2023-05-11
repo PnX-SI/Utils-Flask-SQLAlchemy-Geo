@@ -19,6 +19,8 @@ from marshmallow_geojson import (
     MultiLineStringSchema,
 )
 from shapely.geometry import shape
+from shapely import wkt
+from shapely.errors import WKTReadingError
 
 from .utils import JsonifiableGenerator, GeneratorField
 
@@ -57,10 +59,19 @@ class FeatureCollectionSchema(Schema):
 class GeometryField(fields.Field):
     geometry_schema = GeometrySchema()
 
-    def _serialize(self, value, attr, obj):
+    def _serialize_wkt(self, value, attr, obj):
+        return to_shape(value).wkt if value else None
+
+    def _serialize_geojson(self, value, attr, obj):
         return to_shape(value).__geo_interface__ if value else None
 
-    def _deserialize(self, value, attr, data, **kwargs):
+    def _deserialize_wkt(self, value, attr, data, **kwargs):
+        try:
+            return wkt.loads(value)
+        except WKTReadingError as error:
+            raise ValidationError("Invalid geometry.") from error
+
+    def _deserialize_geojson(self, value, attr, data, **kwargs):
         try:
             geom = shape(self.geometry_schema.load(value))
             if not geom.is_valid:
@@ -70,6 +81,15 @@ class GeometryField(fields.Field):
             return from_shape(geom, srid=4326)
         except ValueError as error:
             raise ValidationError("Invalid geometry.") from error
+
+    def _bind_to_schema(self, field_name, schema):
+        super()._bind_to_schema
+        if schema.as_geojson:
+            self._serialize = self._serialize_geojson
+            self._deserialize = self._deserialize_geojson
+        else:
+            self._serialize = self._serialize_wkt
+            self._deserialize = self._deserialize_wkt
 
 
 class GeoModelConverter(ModelConverter):

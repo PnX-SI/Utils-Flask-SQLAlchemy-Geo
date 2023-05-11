@@ -58,12 +58,7 @@ class TestGeoSchema:
             # geom field is automatically excluded
         }
         assert ParentSchema().dump(p1) == expected
-        assert ParentSchema(only=["geom"]).dump(p1) == {
-            "geom": {
-                "type": "Point",
-                "coordinates": (6.0, 10.0),
-            },
-        }
+        assert ParentSchema(only=["geom"]).dump(p1) == {"geom": "POINT (6 10)"}
         assert ParentSchema(exclude=["pk"]).dump(p1) == {"name": "p1"}
         assert ParentSchema(only=["name", "geom"], exclude=["pk", "geom"]).dump(p1) == {
             "name": "p1"
@@ -86,7 +81,7 @@ class TestGeoSchema:
         ]
         assert ParentSchema(exclude=["pk"]).dump([p2], many=True) == [{"name": "p2"}]
         assert ParentSchema(only=["pk", "geom"], exclude=["pk"]).dump([p1], many=True) == [
-            {"geom": {"type": "Point", "coordinates": (6, 10)}}
+            {"geom": "POINT (6 10)"}
         ]
 
     def test_to_geojson_feature(self, p1):
@@ -127,6 +122,34 @@ class TestGeoSchema:
         }
         assert ParentSchema(as_geojson=True, only=["pk", "geom"]).dump(p1) == expected
         assert ParentSchema(as_geojson=True, only=["pk"], exclude=["geom"]).dump(p1) == expected
+
+    def test_to_geojson_null_geom(self):
+        expected = {
+            "id": 1,
+            "type": "Feature",
+            "geometry": None,
+            "properties": {
+                "pk": 1,
+                "name": "p",
+            },
+        }
+        p = Parent(pk=1, name="p")
+        assert ParentSchema(as_geojson=True).dump(p) == expected
+
+    def test_to_geojson_excluded_geom(self, p1):
+        expected = {
+            "id": 1,
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": (6.0, 10.0),
+            },
+            "properties": {
+                "pk": 1,
+                "name": "p1",
+            },
+        }
+        assert ParentSchema(as_geojson=True, exclude=["geom"]).dump(p1) == expected
 
     def test_to_geojson_feature_collection(self, p1, p2):
         expected = {
@@ -173,16 +196,31 @@ class TestGeoSchema:
             }
         )
 
+    def test_from_json_geom(self):
+        p = ParentSchema(only=["geom"]).load(
+            {
+                "geom": "POINT (6 10)",
+            }
+        )
+        assert p["geom"] == Point(6, 10)
+
     def test_from_json_unexpected_geom(self):
         with pytest.raises(ValidationError, match="'geom': \\['Unknown field.'\\]"):
             ParentSchema().load(
                 {
                     "pk": 1,
                     "name": "p1",
-                    "geom": {
-                        "type": "Point",
-                        "coordinates": (6.0, 10.0),
-                    },
+                    "geom": "POINT (6 10)",
+                }
+            )
+
+    def test_from_json_invalid_geom(self):
+        with pytest.raises(ValidationError, match="'geom': \\['Invalid geometry.'\\]"):
+            ParentSchema(only=["geom"]).load(
+                {
+                    "pk": 1,
+                    "name": "p1",
+                    "geom": "POINT (invalid)",
                 }
             )
 
@@ -244,34 +282,6 @@ class TestGeoSchema:
         assert p2["pk"] == 2
         assert p2["name"] == "p2"
         assert to_shape(p2["geom"]).equals(Point(10, 6))
-
-    def test_to_geojson_null_geom(self):
-        expected = {
-            "id": 1,
-            "type": "Feature",
-            "geometry": None,
-            "properties": {
-                "pk": 1,
-                "name": "p",
-            },
-        }
-        p = Parent(pk=1, name="p")
-        assert ParentSchema(as_geojson=True).dump(p) == expected
-
-    def test_to_geojson_excluded_geom(self, p1):
-        expected = {
-            "id": 1,
-            "type": "Feature",
-            "geometry": {
-                "type": "Point",
-                "coordinates": (6.0, 10.0),
-            },
-            "properties": {
-                "pk": 1,
-                "name": "p1",
-            },
-        }
-        assert ParentSchema(as_geojson=True, exclude=["geom"]).dump(p1) == expected
 
     def test_from_geojson_null_geom(self):
         p = ParentSchema(as_geojson=True).load(
