@@ -165,8 +165,16 @@ class GenericQueryGeo(GenericQuery):
         """
 
         if pk_name is None:
-            pk_name = str(self.view.tableDef.columns.keys()[0])
+            # recherche de pk_name dans les colonnes
+            pk_names = [col.key for col in self.view.tableDef.columns if col.primary_key]
+            if pk_names:
+                pk_name = pk_names[0]
+            else:
+                # sinon on prend la premiere colonne ????
+                # dans l'ideal il aurait fallu fournir la pk_name dans ce cas là
+                pk_name = self.view.tableDef.columns.keys()[0]
 
+        # test si pk_name existe bien
         if not hasattr(self.view.tableDef.c, pk_name):
             raise Exception(f"{pk_name} cannot be found in table")
 
