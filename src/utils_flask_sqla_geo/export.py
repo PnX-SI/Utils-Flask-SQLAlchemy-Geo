@@ -56,8 +56,8 @@ def export_csv(
     writer.writeheader()  # ligne d'entête
 
     # écriture des lignes dans le fichier csv
-    for line in query.yield_per(chunk_size):
-        writer.writerow(schema.dump(line))
+    for line in schema.dump(query.yield_per(chunk_size), many=True):
+        writer.writerow(line)
 
 
 def export_geojson(
