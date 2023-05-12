@@ -1,14 +1,10 @@
 import csv
 import json
-import pathlib
 from typing import Type
 
 import fiona
 from fiona.crs import from_epsg
-from geonature.utils.env import db
-from geonature.utils.errors import GeoNatureError
-from sqlalchemy.orm import Query
-from utils_flask_sqla.schema import SmartRelationshipsMixin
+
 from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema
 from utils_flask_sqla_geo.utilsgeometry import FIONA_MAPPING
 

@@ -7,8 +7,8 @@ from geojson import Feature, FeatureCollection
 from utils_flask_sqla.generic import GenericQuery, GenericTable
 from utils_flask_sqla.schema import SmartRelationshipsMixin
 
-from .schema import GeoAlchemyAutoSchema
-from .utilsgeometry import create_shapes_generic, export_geodata_as_file
+from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema
+from utils_flask_sqla_geo.utilsgeometry import create_shapes_generic, export_geodata_as_file
 
 
 def get_geojson_feature(wkb):
