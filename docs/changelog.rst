@@ -2,6 +2,21 @@
 CHANGELOG
 =========
 
+2.8.0 (unreleased)
+------------------
+
+**🚀 Nouveautés**
+
+* Ajout de SQLAlchemy 1.4 (en plus de 1.3) à l’intégration continue
+* ``GeoAlchemyAutoSchema`` :
+  * Sérialisation en JSON (et non GeoJSON) : encodage des géométries en WKT
+  * Support de la sérialisation d’un générateur afin d’encoder un grand nombre de données avec une faible emprunte mémoire
+* ``GenericQueryGeo`` :
+  * ``get_model`` : génération automatique d’un modèle à partir d’une table
+  * ``get_schema`` : génération automatique d’un schéma à partir d’un modèle
+* Ajout de fonctions d’export en JSON, GeoJSON et GeoPackage performantes avec une faible emprunte mémoire
+
+
 0.2.7 (2023-03-03)
 ------------------
 
