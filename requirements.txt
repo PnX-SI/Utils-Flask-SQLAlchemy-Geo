@@ -35,12 +35,10 @@ flask-sqlalchemy==3.0.3
     #   utils-flask-sqlalchemy
 geoalchemy2==0.13.1
     # via -r requirements.in
-geojson==3.0.0
+geojson==3.0.1
     # via -r requirements.in
 greenlet==2.0.2
     # via sqlalchemy
-importlib-metadata==6.0.0
-    # via flask
 itsdangerous==2.1.2
     # via flask
 jinja2==3.1.2
@@ -85,10 +83,8 @@ sqlalchemy==1.4.46
     #   marshmallow-sqlalchemy
 utils-flask-sqlalchemy==0.3.1
     # via -r requirements.in
-werkzeug==2.2.3
+werkzeug==3.0.1
     # via flask
-zipp==3.13.0
-    # via importlib-metadata
 
 # The following packages are considered to be unsafe in a requirements file:
 # setuptools
