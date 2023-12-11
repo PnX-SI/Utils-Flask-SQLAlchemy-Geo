@@ -48,7 +48,7 @@ class GenericTableGeo(GenericTable):
             )
         if getattr(data, self.geometry_field) is not None:
             geometry = to_shape(getattr(data, self.geometry_field))
-            return Feature(geometry=geometry, properties=self.as_dict(data, fields))
+            return Feature(geometry=geometry, properties=self.as_dict(data, fields=fields))
 
     def as_shape(self, db_cols, geojson_col=None, data=[], dir_path=None, file_name=None):
         """
