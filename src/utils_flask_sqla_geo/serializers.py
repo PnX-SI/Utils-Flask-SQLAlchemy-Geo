@@ -91,8 +91,8 @@ def get_geoserializable_decorator(geoCol=None, idCol=None, **kwargs):
             self.from_dict(properties, recursif=recursif)
 
             # voir si meilleure procédure pour mettre la geometrie en base
-            shape = shape(geometry)
-            two_dimension_geom = remove_third_dimension(shape)
+            _shape = shape(geometry)
+            two_dimension_geom = remove_third_dimension(_shape)
             geom = from_shape(two_dimension_geom, srid=4326)
             setattr(self, col_geom_name, geom)
 
