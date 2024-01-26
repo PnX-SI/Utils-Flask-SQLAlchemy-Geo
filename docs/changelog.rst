@@ -2,19 +2,35 @@
 CHANGELOG
 =========
 
-2.8.0 (2023-05-24)
+0.3.0 (unreleased)
 ------------------
 
 **🚀 Nouveautés**
 
-* Ajout de SQLAlchemy 1.4 (en plus de 1.3) à l’intégration continue
-* ``GeoAlchemyAutoSchema`` :
-  * Sérialisation en JSON (et non GeoJSON) : encodage des géométries en WKT
-  * Support de la sérialisation d’un générateur afin d’encoder un grand nombre de données avec une faible emprunte mémoire
-* ``GenericQueryGeo`` :
-  * ``get_model`` : génération automatique d’un modèle à partir d’une table
-  * ``get_schema`` : génération automatique d’un schéma à partir d’un modèle
-* Ajout de fonctions d’export en JSON, GeoJSON et GeoPackage performantes avec une faible emprunte mémoire
+- Compatibilité Shapely 2.0 (#14)
+- Mise à jour de Flask version 2 à 3 (#23)
+- Amélioration de la compatibilité SQLAlchemy 1.4 (#23)
+
+**🐛 Corrections**
+
+- Correction d'une fonction et d'une variable ayant le même nom ``shape`` (#25)
+
+
+0.2.8 (2023-05-24)
+------------------
+
+**🚀 Nouveautés**
+
+- Ajout de SQLAlchemy 1.4 (en plus de 1.3) à l’intégration continue
+- ``GeoAlchemyAutoSchema`` :
+
+  - Sérialisation en JSON (et non GeoJSON) : encodage des géométries en WKT
+  - Support de la sérialisation d’un générateur afin d’encoder un grand nombre de données avec une faible emprunte mémoire
+- ``GenericQueryGeo`` :
+
+  - ``get_model`` : génération automatique d’un modèle à partir d’une table
+  - ``get_schema`` : génération automatique d’un schéma à partir d’un modèle
+- Ajout de fonctions d’export en JSON, GeoJSON et GeoPackage performantes avec une faible emprunte mémoire
 
 
 0.2.7 (2023-03-03)
@@ -22,14 +38,14 @@ CHANGELOG
 
 **🚀 Nouveautés**
 
-* Ajout du schéma ``GeoAlchemyAutoSchema`` permettant la sérialisation de modèle contenant des colonnes géographiques en GeoJSON
-* Ajout de l’utilitaire ``geojsonify`` similaire à ``flask.jsonify`` mais définisant un ``Content-Type`` ``application/geo+json``
-* Compatibilité SQLAlchemy 1.4 / Flask-SQLAlchemy 2
-* Intégration continue avec ``pytest``
+- Ajout du schéma ``GeoAlchemyAutoSchema`` permettant la sérialisation de modèle contenant des colonnes géographiques en GeoJSON
+- Ajout de l’utilitaire ``geojsonify`` similaire à ``flask.jsonify`` mais définisant un ``Content-Type`` ``application/geo+json``
+- Compatibilité SQLAlchemy 1.4 / Flask-SQLAlchemy 2
+- Intégration continue avec ``pytest``
 
 **🐛 Corrections**
 
-* Correction des dépendances : ``shapely<2``
+- Correction des dépendances : ``shapely<2``
 
 
 0.2.6 (2022-12-12)
