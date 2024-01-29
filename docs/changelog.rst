@@ -10,6 +10,7 @@ CHANGELOG
 - Compatibilité Shapely 2.0 (#14)
 - Mise à jour de Flask version 2 à 3 (#23)
 - Amélioration de la compatibilité SQLAlchemy 1.4 (#23)
+- Abandon du support de Python 3.7
 
 **🐛 Corrections**
 
