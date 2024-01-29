@@ -2,7 +2,7 @@ sqlalchemy<2
 fiona>=1.8.13.post1
 geoalchemy2>=0.4.0
 shapely>=1.8.5.post1
-utils-flask-sqlalchemy>=0.4.0
+utils-flask-sqlalchemy>=0.4.1
 marshmallow_sqlalchemy
 marshmallow_geojson
 geojson
