@@ -88,7 +88,7 @@ sqlalchemy==1.4.50
     #   utils-flask-sqlalchemy
 typing-extensions==4.8.0
     # via alembic
-utils-flask-sqlalchemy==0.3.6
+utils-flask-sqlalchemy==0.4.0
     # via -r requirements.in
 werkzeug==3.0.1
     # via flask
