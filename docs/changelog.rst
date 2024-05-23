@@ -2,6 +2,14 @@
 CHANGELOG
 =========
 
+
+0.3.2 (2024-04-23)
+------------------
+
+**🚀 Nouveautés**
+
+- Mise à jour des dépendances critiques : `werkzeug` et `jinja2` (#31)
+
 0.3.1 (2024-01-29)
 ------------------
 
