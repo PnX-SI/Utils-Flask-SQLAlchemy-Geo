@@ -137,6 +137,12 @@ class GenericQueryGeo(GenericQuery):
             srid=srid,
         )
 
+    def return_query(self):
+        if self.geometry_field:
+            return self.as_geofeature()
+        else:
+            return super(GenericQueryGeo, self).return_query()
+
     def as_geofeature(self):
         data, nb_result_without_filter, nb_results = self.query()
 
