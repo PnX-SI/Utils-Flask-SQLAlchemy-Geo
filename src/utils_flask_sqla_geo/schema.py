@@ -20,7 +20,7 @@ from marshmallow_geojson import (
 )
 from shapely.geometry import shape
 from shapely import wkt
-from shapely.errors import WKTReadingError
+from shapely.errors import ShapelyError
 
 from .utils import JsonifiableGenerator, GeneratorField
 
@@ -68,7 +68,7 @@ class GeometryField(fields.Field):
     def _deserialize_wkt(self, value, attr, data, **kwargs):
         try:
             return wkt.loads(value)
-        except WKTReadingError as error:
+        except ShapelyError as error:
             raise ValidationError("Invalid geometry.") from error
 
     def _deserialize_geojson(self, value, attr, data, **kwargs):
