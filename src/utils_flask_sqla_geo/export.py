@@ -33,7 +33,7 @@ def export_csv(
         geometry_field_name (_type_, optional): nom du champ pour la colonne geométrique. Defaults to None.
     """
     # gestion de only
-    only = columns
+    only = columns.copy()
 
     # ajout du champs geométrique si demandé (sera exporté en WKT)
     if geometry_field_name:
