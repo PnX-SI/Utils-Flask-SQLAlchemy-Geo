@@ -137,6 +137,7 @@ class GenericQueryGeo(GenericQuery):
             geometry_field=geometry_field,
             srid=srid,
         )
+        self.srid = srid
 
     def as_geofeature(self):
         data, nb_result_without_filter, nb_results = self.query()
@@ -225,7 +226,9 @@ class GenericQueryGeo(GenericQuery):
                 query = query.where(
                     func.ST_Intersects(
                         col,
-                        func.ST_GeomFromText(param_value, 4326),
+                        func.ST_GeomFromText(
+                            param_value, self.view.srid if self.view.srid else 4326
+                        ),
                     )
                 )
         return query
