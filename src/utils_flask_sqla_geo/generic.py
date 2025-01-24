@@ -219,7 +219,7 @@ class GenericQueryGeo(GenericQuery):
     def build_query_filter(self, query, param_name, param_value):
         query = super().build_query_filter(query, param_name, param_value)
 
-        if param_name.startswith("inwkt_"):
+        if param_name.startswith("inwkt"):
             col = self.view.tableDef.columns[self.view.geometry_field]
             if col.type.__class__.__name__ == "Geometry":
                 query = query.where(
