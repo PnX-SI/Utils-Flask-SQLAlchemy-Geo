@@ -217,6 +217,9 @@ class GenericQueryGeo(GenericQuery):
             dict_schema,
         )
 
+    def return_query(self):
+        return self.as_geofeature()
+
     def build_query_filter(self, query, param_name, param_value):
         query = super().build_query_filter(query, param_name, param_value)
 
