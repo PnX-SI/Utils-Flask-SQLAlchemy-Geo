@@ -1,11 +1,23 @@
 # CHANGELOG
 
+## 0.3.3 (2025-05-xx)
+
+**🚀 Nouveautés**
+
+- Surcharge de la méthode `return_query` dans `GenericQueryGeo` (#37 par @jacquesfize)
+- Permettre de filtrer les résultats de la requête généré par `GenericQueryGeo` avec une geometrie (#35 par @jacquesfize)
+
+**🐛 Corrections**
+
+- Correction du bug de partage de colonne dans le paramètre `only` de la fonction `export_csv` (#34 par @mathieu-roudaut-crea)
+
+
 ## 0.3.2 (2024-04-23)
 
 **🚀 Nouveautés**
 
--   Mise à jour des dépendances critiques : [werkzeug]{.title-ref} et
-    [jinja2]{.title-ref} (#31)
+-   Mise à jour des dépendances critiques : `werkzeug` et
+    `jinja2` (#31)
 
 ## 0.3.1 (2024-01-29)
 
@@ -126,7 +138,7 @@
 
 **🐛 Corrections**
 
--   Mise à jour de la version de [utils-flask-sqlalchemy]{.title-ref}
+-   Mise à jour de la version de `utils-flask-sqlalchemy`
 
 ## 0.1.1 (2020-10-17)
 
