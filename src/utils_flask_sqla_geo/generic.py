@@ -2,6 +2,7 @@ from itertools import chain
 from typing import Union
 from warnings import warn
 
+from sqlalchemy import func
 from geoalchemy2.shape import to_shape
 from geojson import Feature, FeatureCollection
 from utils_flask_sqla.generic import GenericQuery, GenericTable
@@ -136,6 +137,7 @@ class GenericQueryGeo(GenericQuery):
             geometry_field=geometry_field,
             srid=srid,
         )
+        self.srid = srid
 
     def as_geofeature(self):
         data, nb_result_without_filter, nb_results = self.query()
@@ -214,3 +216,22 @@ class GenericQueryGeo(GenericQuery):
             ),
             dict_schema,
         )
+
+    def return_query(self):
+        return self.as_geofeature()
+
+    def build_query_filter(self, query, param_name, param_value):
+        query = super().build_query_filter(query, param_name, param_value)
+
+        if param_name.startswith("geometry"):
+            col = self.view.tableDef.columns[self.view.geometry_field]
+            if col.type.__class__.__name__ == "Geometry":
+                query = query.where(
+                    func.ST_Intersects(
+                        col,
+                        func.ST_GeomFromText(
+                            param_value, self.view.srid if self.view.srid else 4326
+                        ),
+                    )
+                )
+        return query
