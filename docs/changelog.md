@@ -4,7 +4,7 @@
 
 **🚀 Nouveautés**
 
-- Surcharge de la méthode `return_query` dans `GenericQueryGeo` (#37 par @jacquesfize)
+- Surcharge de la méthode `return_query` dans `GenericQueryGeo` (#30 par @jacquesfize)
 - Permettre de filtrer les résultats de la requête généré par `GenericQueryGeo` avec une geometrie (#35 par @jacquesfize)
 
 **🐛 Corrections**
