@@ -52,17 +52,13 @@ def export_csv(
     )
 
     writer.writeheader()  # ligne d'entête
-    import os
 
-    print("???????")
-    print(os.environ["FLASK_SQLALCHEMY_DB"])
     # legacy sqlalchemy 1.x Query object
     if type(query) is Select:
-        data = db.session.scalars(query.execution_options(yield_per=chunk_size))
+        data = db.session.execute(query.execution_options(yield_per=chunk_size))
     else:
         data = query.yield_per(chunk_size)
     # écriture des lignes dans le fichier csv
-    print(schema.dump(data, many=True))
     for line in schema.dump(data, many=True):
         writer.writerow(line)
 
