@@ -5,10 +5,10 @@ from typing import Type
 import fiona
 from fiona.crs import from_epsg
 
-from geonature.utils.env import db
 from sqlalchemy.sql.selectable import Select
 from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema
 from utils_flask_sqla_geo.utilsgeometry import FIONA_MAPPING
+from utils_flask_sqla.env import db
 
 
 def export_csv(
@@ -52,7 +52,10 @@ def export_csv(
     )
 
     writer.writeheader()  # ligne d'entête
+    import os
 
+    print("???????")
+    print(os.environ["FLASK_SQLALCHEMY_DB"])
     # legacy sqlalchemy 1.x Query object
     if type(query) is Select:
         data = db.session.scalars(query.execution_options(yield_per=chunk_size))
