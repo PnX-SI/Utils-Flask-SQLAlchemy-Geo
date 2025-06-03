@@ -5,6 +5,8 @@ from typing import Type
 import fiona
 from fiona.crs import from_epsg
 
+from geonature.utils.env import db
+from sqlalchemy.sql.selectable import Select
 from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema
 from utils_flask_sqla_geo.utilsgeometry import FIONA_MAPPING
 
@@ -51,8 +53,14 @@ def export_csv(
 
     writer.writeheader()  # ligne d'entête
 
+    # legacy sqlalchemy 1.x Query object
+    if type(query) is Select:
+        data = db.session.scalars(query.execution_options(yield_per=chunk_size))
+    else:
+        data = query.yield_per(chunk_size)
     # écriture des lignes dans le fichier csv
-    for line in schema.dump(query.yield_per(chunk_size), many=True):
+    print(schema.dump(data, many=True))
+    for line in schema.dump(data, many=True):
         writer.writerow(line)
 
 
