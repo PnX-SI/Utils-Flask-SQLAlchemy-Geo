@@ -90,8 +90,14 @@ def export_geojson(
         only=columns or None, as_geojson=True, feature_geometry=geometry_field_name
     )
 
+    # legacy sqlalchemy 1.x Query object
+    if type(query) is Select:
+        data = db.session.execute(query.execution_options(yield_per=chunk_size))
+    else:
+        data = query.yield_per(chunk_size)
+
     # serialisation
-    feature_collection = schema.dump(query.yield_per(chunk_size), many=True)
+    feature_collection = schema.dump(data, many=True)
 
     # écriture du ficher geojson
     for chunk in json.JSONEncoder().iterencode(feature_collection):
@@ -130,8 +136,14 @@ def export_json(
     # instantiation du schema avec only
     schema = schema_class(only=only or None)
 
+    # legacy sqlalchemy 1.x Query object
+    if type(query) is Select:
+        data = db.session.execute(query.execution_options(yield_per=chunk_size))
+    else:
+        data = query.yield_per(chunk_size)
+
     # serialisation
-    iterable_data = schema.dump(query.yield_per(chunk_size), many=True)
+    iterable_data = schema.dump(data, many=True)
 
     # écriture du fichier json
     for chunk in json.JSONEncoder().iterencode(iterable_data):
@@ -151,8 +163,13 @@ def export_geopackage(
         only=columns or None, as_geojson=True, feature_geometry=geometry_field_name
     )
 
-    feature_collection = schema.dump(query.yield_per(chunk_size), many=True)
+    # legacy sqlalchemy 1.x Query object
+    if type(query) is Select:
+        data = db.session.execute(query.execution_options(yield_per=chunk_size))
+    else:
+        data = query.yield_per(chunk_size)
 
+    feature_collection = schema.dump(data, many=True)
     # FIXME: filter tableDef columns with columns
     properties = {
         db_col.key: FIONA_MAPPING.get(db_col.type.__class__.__name__.lower(), "str")
