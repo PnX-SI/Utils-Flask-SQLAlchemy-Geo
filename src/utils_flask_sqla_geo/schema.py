@@ -167,9 +167,13 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
             self.feature_id = feature_id or self.opts.feature_id
             self.feature_geometry = feature_geometry or self.opts.feature_geometry
 
+            # Test type du champ feature_geometry
+            # si de type text on considère qu'il correspond au retour de la fonction st_asgeojson de postgis
+            #       dans ce cas la valeur doit être transformée en json
             if type(self._declared_fields[self.feature_geometry]) is fields.String:
-                self.geojson_field = self.feature_geometry
-                self.feature_geometry = "json_geojson_local"
+                self.to_geometry = lambda val: json.loads(val)
+            else:
+                self.to_geometry = lambda val: val
 
             if not self.feature_geometry:
                 raise TypeError("Missing 'feature_geometry'")
@@ -182,8 +186,9 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
     def to_feature(self, properties):
         feature = {
             "properties": properties,
-            "geometry": properties.pop(self.feature_geometry),
+            "geometry": self.to_geometry(properties.pop(self.feature_geometry)),
         }
+
         if self.feature_id and self.feature_id in properties:
             feature.update(
                 {
@@ -235,14 +240,3 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
         else:
             feature = FeatureSchema(partial=False, unknown=RAISE).load(data)
             return self.from_feature(feature)
-
-    json_geojson_local = fields.Method("eval_st_geojson", deserialize="load_st_geojson")
-
-    def eval_st_geojson(self, obj):
-        if getattr(obj, self.geojson_field):
-            return json.loads(getattr(obj, self.geojson_field))
-        else:
-            return None
-
-    def load_st_geojson(self, value):
-        return json.dumps(value)
