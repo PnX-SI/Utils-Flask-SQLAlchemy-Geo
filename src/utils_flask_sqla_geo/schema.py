@@ -167,6 +167,9 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
             self.feature_id = feature_id or self.opts.feature_id
             self.feature_geometry = feature_geometry or self.opts.feature_geometry
 
+            if not self.feature_geometry:
+                raise TypeError("Missing 'feature_geometry'")
+
             # Test type du champ feature_geometry
             # si de type text on considère qu'il correspond au retour de la fonction st_asgeojson de postgis
             #       dans ce cas la valeur doit être transformée en json
@@ -175,8 +178,6 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
             else:
                 self.to_geometry = lambda val: val
 
-            if not self.feature_geometry:
-                raise TypeError("Missing 'feature_geometry'")
             # Add feature geometry to serialized fields
             exclude.discard(self.feature_geometry)
             if only is not None:
