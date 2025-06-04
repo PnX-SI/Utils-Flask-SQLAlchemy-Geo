@@ -87,7 +87,9 @@ def export_geojson(
 
     # instantiation du schema
     schema = schema_class(
-        only=columns or None, as_geojson=True, feature_geometry=geometry_field_name
+        only=columns or None,
+        as_geojson=True,
+        feature_geometry=geometry_field_name,
     )
 
     # legacy sqlalchemy 1.x Query object
@@ -160,7 +162,9 @@ def export_geopackage(
     chunk_size: int = 1000,
 ):
     schema = schema_class(
-        only=columns or None, as_geojson=True, feature_geometry=geometry_field_name
+        only=columns or None,
+        as_geojson=True,
+        feature_geometry=geometry_field_name,
     )
 
     # legacy sqlalchemy 1.x Query object

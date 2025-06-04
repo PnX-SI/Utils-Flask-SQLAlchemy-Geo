@@ -1,5 +1,5 @@
 from enum import Enum
-
+import json
 from marshmallow import Schema, fields, RAISE, EXCLUDE
 from marshmallow.decorators import pre_load, post_dump
 from marshmallow.validate import OneOf, Range
@@ -166,6 +166,11 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
         if as_geojson:
             self.feature_id = feature_id or self.opts.feature_id
             self.feature_geometry = feature_geometry or self.opts.feature_geometry
+
+            if type(self._declared_fields[self.feature_geometry]) is fields.String:
+                self.geojson_field = self.feature_geometry
+                self.feature_geometry = "json_geojson_local"
+
             if not self.feature_geometry:
                 raise TypeError("Missing 'feature_geometry'")
             # Add feature geometry to serialized fields
@@ -230,3 +235,14 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
         else:
             feature = FeatureSchema(partial=False, unknown=RAISE).load(data)
             return self.from_feature(feature)
+
+    json_geojson_local = fields.Method("eval_st_geojson", deserialize="load_st_geojson")
+
+    def eval_st_geojson(self, obj):
+        if getattr(obj, self.geojson_field):
+            return json.loads(getattr(obj, self.geojson_field))
+        else:
+            return None
+
+    def load_st_geojson(self, value):
+        return json.dumps(value)
