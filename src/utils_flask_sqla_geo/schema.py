@@ -44,11 +44,11 @@ class GeometrySchema(Schema):
 
 
 class FeatureSchema(Schema):
-    id = fields.Field()
+    id = fields.Raw()
     type = fields.Constant("Feature", required=True)
     # note: geometry validity done by GeometryField deserialization
-    geometry = fields.Mapping(required=True, allow_none=True)
-    properties = fields.Mapping(required=True)
+    geometry = fields.Dict(required=True, allow_none=True)
+    properties = fields.Dict(required=True)
 
 
 class FeatureCollectionSchema(Schema):
