@@ -1,3 +1,4 @@
+import json
 from flask import jsonify
 from marshmallow import fields
 
@@ -52,3 +53,31 @@ def geojsonify(*args, **kwargs):
     response = jsonify(*args, **kwargs)
     response.mimetype = "application/geo+json"
     return response
+
+
+def rows_to_geojson(rows, geom_field):
+    features = []
+
+    for row in rows:
+        row = row._mapping  # SQLAlchemy Row → dict-like
+
+        geom = row.get(geom_field)
+        if geom:
+            geometry = json.loads(geom) if isinstance(geom, str) else geom
+        else:
+            geometry = None
+
+        properties = {k: v for k, v in row.items() if k != geom_field}
+
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": properties,
+            }
+        )
+
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+    }
