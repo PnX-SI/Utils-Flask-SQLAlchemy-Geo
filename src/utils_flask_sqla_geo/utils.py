@@ -1,6 +1,8 @@
 import json
 from flask import jsonify
 from marshmallow import fields
+from geoalchemy2 import WKBElement
+from shapely import to_geojson, from_wkb
 
 
 class JsonifiableGenerator(list):
@@ -55,6 +57,31 @@ def geojsonify(*args, **kwargs):
     return response
 
 
+def validGeoJSON(geojson):
+    if "coordinates" in geojson and "type" in geojson:
+        return geojson
+    raise ValueError("Not a valid GeoJSON")
+
+
+def parseGeom(geom):
+    if isinstance(geom, WKBElement) or isinstance(geom, bytes):
+        return json.loads(to_geojson(from_wkb(geom)))
+    if isinstance(geom, dict):
+        return validGeoJSON(geom)
+    if isinstance(geom, str):
+        try:
+            geom = json.loads(geom)
+            return validGeoJSON(geom)
+        except json.JSONDecodeError:
+            raise ValueError("Not a valid JSON")
+        except ValueError:
+            raise ValueError("Not a valid GeoJSON")
+
+    raise ValueError(
+        f"Not a valid type of geometry : {type(geom)}. Must be a GeoJSON dict or a GeoJSON string or WKBElement"
+    )
+
+
 def rows_to_geojson(rows, geom_field):
     features = []
 
@@ -63,7 +90,7 @@ def rows_to_geojson(rows, geom_field):
 
         geom = row.get(geom_field)
         if geom:
-            geometry = json.loads(geom) if isinstance(geom, str) else geom
+            geometry = parseGeom(geom)
         else:
             geometry = None
 
