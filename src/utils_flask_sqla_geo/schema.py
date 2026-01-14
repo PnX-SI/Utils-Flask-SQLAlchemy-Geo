@@ -1,3 +1,4 @@
+import collections
 from enum import Enum
 
 from marshmallow import Schema, fields, RAISE, EXCLUDE
@@ -33,7 +34,7 @@ class PositionField(fields.Field):
     """Field for validating GeoJSON position (longitude, latitude, [altitude])"""
 
     def _deserialize(self, value, attr, data, **kwargs):
-        if not isinstance(value, list):
+        if not isinstance(value, collections.abc.Iterable):
             raise ValidationError("Position must be a list")
 
         if len(value) < 2:
@@ -71,7 +72,7 @@ class MultiPointSchema(Schema):
     coordinates = fields.List(PositionField(), required=True)
 
     @validates("coordinates")
-    def validate_coordinates(self, value):
+    def validate_coordinates(self, value, **kwargs):
         if len(value) == 0:
             raise ValidationError("MultiPoint must have at least one position")
 
@@ -83,7 +84,7 @@ class LineStringSchema(Schema):
     coordinates = fields.List(PositionField(), required=True)
 
     @validates("coordinates")
-    def validate_coordinates(self, value):
+    def validate_coordinates(self, value, **kwargs):
         if len(value) < 2:
             raise ValidationError("LineString must have at least 2 positions")
 
@@ -95,7 +96,7 @@ class MultiLineStringSchema(Schema):
     coordinates = fields.List(fields.List(PositionField()), required=True)
 
     @validates("coordinates")
-    def validate_coordinates(self, value):
+    def validate_coordinates(self, value, **kwargs):
         if len(value) == 0:
             raise ValidationError("MultiLineString must have at least one LineString")
 
@@ -111,7 +112,7 @@ class PolygonSchema(Schema):
     coordinates = fields.List(fields.List(PositionField()), required=True)
 
     @validates("coordinates")
-    def validate_coordinates(self, value):
+    def validate_coordinates(self, value, **kwargs):
         if len(value) == 0:
             raise ValidationError("Polygon must have at least one linear ring")
 
@@ -133,7 +134,7 @@ class MultiPolygonSchema(Schema):
     coordinates = fields.List(fields.List(fields.List(PositionField())), required=True)
 
     @validates("coordinates")
-    def validate_coordinates(self, value):
+    def validate_coordinates(self, value, **kwargs):
         if len(value) == 0:
             raise ValidationError("MultiPolygon must have at least one Polygon")
 
@@ -171,8 +172,8 @@ class FeatureSchema(Schema):
     id = fields.Field()
     type = fields.Constant("Feature", required=True)
     # note: geometry validity done by GeometryField deserialization
-    geometry = fields.Mapping(required=True, allow_none=True)
-    properties = fields.Mapping(required=True)
+    geometry = fields.Dict(required=True, allow_none=True)
+    properties = fields.Dict(required=True)
 
 
 class FeatureCollectionSchema(Schema):
