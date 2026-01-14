@@ -329,7 +329,7 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
             result = super(GeoAlchemyAutoSchema, self)._serialize(obj, many=False)
             return result
 
-    @post_dump(pass_many=True)
+    @post_dump(pass_collection=True)
     def to_geojson(self, data, many, **kwargs):
         if self.as_geojson:
             if many:
@@ -344,7 +344,7 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
                 data = JsonifiableGenerator(data)
             return data
 
-    @pre_load(pass_many=True)
+    @pre_load(pass_collection=True)
     def from_geojson(self, data, many, **kwargs):
         if not self.as_geojson:
             return data
