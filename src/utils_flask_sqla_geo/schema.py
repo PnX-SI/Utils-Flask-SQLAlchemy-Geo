@@ -9,20 +9,144 @@ from geoalchemy2 import Geometry
 from geoalchemy2.shape import to_shape, from_shape
 from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchema, SQLAlchemyAutoSchemaOpts
 from marshmallow_sqlalchemy.convert import ModelConverter
-from marshmallow_geojson import (
-    GeometryType,
-    PointSchema,
-    MultiPointSchema,
-    PolygonSchema,
-    MultiPolygonSchema,
-    LineStringSchema,
-    MultiLineStringSchema,
-)
 from shapely.geometry import shape
 from shapely import wkt
 from shapely.errors import ShapelyError
 
 from .utils import JsonifiableGenerator, GeneratorField
+
+from marshmallow import Schema, fields, validates, ValidationError
+
+
+class GeometryType(Enum):
+
+    point = "Point"
+    multi_point = "MultiPoint"
+    line_string = "LineString"
+    multi_line_string = "MultiLineString"
+    polygon = "Polygon"
+    multi_polygon = "MultiPolygon"
+    geometry_collection = "GeometryCollection"
+
+
+class PositionField(fields.Field):
+    """Field for validating GeoJSON position (longitude, latitude, [altitude])"""
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if not isinstance(value, list):
+            raise ValidationError("Position must be a list")
+
+        if len(value) < 2:
+            raise ValidationError("Position must have at least 2 coordinates")
+
+        if len(value) > 3:
+            raise ValidationError("Position must have at most 3 coordinates")
+
+        for coord in value:
+            if not isinstance(coord, (int, float)):
+                raise ValidationError("Position coordinates must be numbers")
+
+        # Validate longitude range
+        if not -180 <= value[0] <= 180:
+            raise ValidationError("Longitude must be between -180 and 180")
+
+        # Validate latitude range
+        if not -90 <= value[1] <= 90:
+            raise ValidationError("Latitude must be between -90 and 90")
+
+        return value
+
+
+class PointSchema(Schema):
+    """Schema for GeoJSON Point geometry"""
+
+    type = fields.Constant("Point", required=True)
+    coordinates = PositionField(required=True)
+
+
+class MultiPointSchema(Schema):
+    """Schema for GeoJSON MultiPoint geometry"""
+
+    type = fields.Constant("MultiPoint", required=True)
+    coordinates = fields.List(PositionField(), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value):
+        if len(value) == 0:
+            raise ValidationError("MultiPoint must have at least one position")
+
+
+class LineStringSchema(Schema):
+    """Schema for GeoJSON LineString geometry"""
+
+    type = fields.Constant("LineString", required=True)
+    coordinates = fields.List(PositionField(), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value):
+        if len(value) < 2:
+            raise ValidationError("LineString must have at least 2 positions")
+
+
+class MultiLineStringSchema(Schema):
+    """Schema for GeoJSON MultiLineString geometry"""
+
+    type = fields.Constant("MultiLineString", required=True)
+    coordinates = fields.List(fields.List(PositionField()), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value):
+        if len(value) == 0:
+            raise ValidationError("MultiLineString must have at least one LineString")
+
+        for linestring in value:
+            if len(linestring) < 2:
+                raise ValidationError("Each LineString must have at least 2 positions")
+
+
+class PolygonSchema(Schema):
+    """Schema for GeoJSON Polygon geometry"""
+
+    type = fields.Constant("Polygon", required=True)
+    coordinates = fields.List(fields.List(PositionField()), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value):
+        if len(value) == 0:
+            raise ValidationError("Polygon must have at least one linear ring")
+
+        for ring in value:
+            if len(ring) < 4:
+                raise ValidationError("Linear ring must have at least 4 positions")
+
+            # Verify ring is closed (first and last positions are the same)
+            if ring[0] != ring[-1]:
+                raise ValidationError(
+                    "Linear ring must be closed (first and last positions must match)"
+                )
+
+
+class MultiPolygonSchema(Schema):
+    """Schema for GeoJSON MultiPolygon geometry"""
+
+    type = fields.Constant("MultiPolygon", required=True)
+    coordinates = fields.List(fields.List(fields.List(PositionField())), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value):
+        if len(value) == 0:
+            raise ValidationError("MultiPolygon must have at least one Polygon")
+
+        for polygon in value:
+            if len(polygon) == 0:
+                raise ValidationError("Each Polygon must have at least one linear ring")
+
+            for ring in polygon:
+                if len(ring) < 4:
+                    raise ValidationError("Linear ring must have at least 4 positions")
+
+                if ring[0] != ring[-1]:
+                    raise ValidationError("Linear ring must be closed")
 
 
 class GeometrySchema(Schema):
