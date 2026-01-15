@@ -61,6 +61,7 @@ markupsafe==3.0.3
     #   werkzeug
 marshmallow==4.0.1
     # via
+    #   -r requirements.in
     #   marshmallow-sqlalchemy
     #   utils-flask-sqlalchemy
 marshmallow-sqlalchemy==1.4.2
