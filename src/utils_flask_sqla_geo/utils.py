@@ -1,8 +1,5 @@
-import json
 from flask import jsonify
 from marshmallow import fields
-from geoalchemy2 import WKBElement
-from shapely import to_geojson, from_wkb
 
 
 class JsonifiableGenerator(list):
@@ -55,56 +52,3 @@ def geojsonify(*args, **kwargs):
     response = jsonify(*args, **kwargs)
     response.mimetype = "application/geo+json"
     return response
-
-
-def validGeoJSON(geojson):
-    if "coordinates" in geojson and "type" in geojson:
-        return geojson
-    raise ValueError("Not a valid GeoJSON")
-
-
-def parseGeom(geom):
-    if isinstance(geom, WKBElement) or isinstance(geom, bytes):
-        return json.loads(to_geojson(from_wkb(geom)))
-    if isinstance(geom, dict):
-        return validGeoJSON(geom)
-    if isinstance(geom, str):
-        try:
-            geom = json.loads(geom)
-            return validGeoJSON(geom)
-        except json.JSONDecodeError:
-            raise ValueError("Not a valid JSON")
-        except ValueError:
-            raise ValueError("Not a valid GeoJSON")
-
-    raise ValueError(
-        f"Not a valid type of geometry : {type(geom)}. Must be a GeoJSON dict or a GeoJSON string or WKBElement"
-    )
-
-
-def rows_to_geojson(rows, geom_field):
-    features = []
-
-    for row in rows:
-        row = row._mapping  # SQLAlchemy Row → dict-like
-
-        geom = row.get(geom_field)
-        if geom:
-            geometry = parseGeom(geom)
-        else:
-            geometry = None
-
-        properties = {k: v for k, v in row.items() if k != geom_field}
-
-        features.append(
-            {
-                "type": "Feature",
-                "geometry": geometry,
-                "properties": properties,
-            }
-        )
-
-    return {
-        "type": "FeatureCollection",
-        "features": features,
-    }

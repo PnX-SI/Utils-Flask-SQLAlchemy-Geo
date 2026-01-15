@@ -3,13 +3,17 @@ import ast
 from abc import ABC, abstractmethod
 from collections import OrderedDict
 
+from typing import Union, List, TypeVar
 import zipfile
 import fiona
 import logging
 import json
 
 from fiona.crs import from_epsg
+from geoalchemy2 import WKBElement
 from geoalchemy2.shape import to_shape
+from marshmallow import ValidationError
+from shapely import from_wkb, to_geojson
 from shapely.geometry import (
     mapping,
     shape,
@@ -23,7 +27,9 @@ from shapely.geometry import (
     GeometryCollection,
 )
 
+import sqlalchemy
 from utils_flask_sqla.errors import UtilsSqlaError
+from utils_flask_sqla_geo.schema import GeometrySchema
 
 # Creation des shapefiles avec la librairies fiona
 
@@ -565,3 +571,127 @@ def remove_third_dimension(geom):
         raise RuntimeError(
             "Currently this type of geometry is not supported: {}".format(type(geom))
         )
+
+
+def valid_GeoJSON(geojson: dict):
+    """
+    Validate a GeoJSON object
+
+    Parameters
+    ----------
+    geojson : dict
+        A GeoJSON object to validate
+
+    Returns
+    -------
+    geojson : dict
+        The validated GeoJSON object
+
+    Raises
+    ------
+    ValueError
+        If the GeoJSON object is not valid
+
+    Notes
+    -----
+    If the validation fails, a ValueError
+    is raised with the message "Not a valid GeoJSON".
+    """
+    try:
+        GeometrySchema().validate(geojson)
+        return geojson
+    except ValidationError:
+        raise ValueError("Not a valid GeoJSON")
+
+
+GeoJSON = TypeVar("GeoJSON", str, dict)
+
+
+def parse_geom(geom: Union[GeoJSON, WKBElement, bytes]):
+    """
+    Parse a geometry object into a GeoJSON dict.
+
+    Parameters
+    ----------
+    geom : GeoJSON(str, dict)| WKBElement| bytes
+        A geometry object to parse. It can be a GeoJSON dict, a GeoJSON string, a WKBElement or bytes.
+
+    Returns
+    -------
+    dict
+        The parsed GeoJSON dict.
+
+    Raises
+    ------
+    ValueError
+        If the geometry object is not a valid GeoJSON dict or string or WKBElement.
+
+    Notes
+    -----
+    If the geometry object is a GeoJSON string, it is parsed into a GeoJSON dict.
+    If the geometry object is a WKBElement or bytes, it is parsed into a GeoJSON dict using shapely.
+    If the geometry object is a GeoJSON dict, it is validated and returned as is.
+    """
+    if isinstance(geom, WKBElement) or isinstance(geom, bytes):
+        return json.loads(to_geojson(from_wkb(geom)))
+    if isinstance(geom, dict):
+        return valid_GeoJSON(geom)
+    if isinstance(geom, str):
+        try:
+            geom = json.loads(geom)
+            return valid_GeoJSON(geom)
+        except json.JSONDecodeError:
+            raise ValueError("Not a valid JSON")
+        except ValueError:
+            raise ValueError("Not a valid GeoJSON")
+
+    raise ValueError(
+        f"Not a valid type of geometry : {type(geom)}. Must be a GeoJSON dict or a GeoJSON string or WKBElement"
+    )
+
+
+def rows_to_geojson(rows: List[sqlalchemy.engine.Row], geom_field: str) -> dict:
+    """
+    Convert a list of SQLAlchemy rows into a GeoJSON FeatureCollection.
+
+    Parameters
+    ----------
+    rows : List[sqlalchemy.engine.Row]
+        A list of SQLAlchemy rows to convert.
+    geom_field : str
+        The name of the field containing the geometry.
+
+    Returns
+    -------
+    dict
+        A GeoJSON FeatureCollection containing the rows converted into features.
+
+    Notes
+    -----
+    The geometry is parsed from the geom_field using parse_geom.
+    The properties are copied from the row, excluding the geom_field.
+    """
+    features = []
+    for row in rows:
+        row = row._mapping  # SQLAlchemy Row → dict-like
+
+        geom = row.get(geom_field)
+        if geom:
+            geometry = parse_geom(geom)
+        else:
+            geometry = None
+
+        properties = {k: v for k, v in row.items() if k != geom_field}
+
+        features.append(
+            {
+                "type": "Feature",
+                "geometry": geometry,
+                "properties": properties,
+            }
+        )
+
+    return {
+        "type": "FeatureCollection",
+        "features": features,
+    }

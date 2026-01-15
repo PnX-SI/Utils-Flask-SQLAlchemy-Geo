@@ -4,7 +4,6 @@ from enum import Enum
 from marshmallow import Schema, fields, RAISE, EXCLUDE
 from marshmallow.decorators import pre_load, post_dump
 from marshmallow.validate import OneOf, Range
-from marshmallow.exceptions import ValidationError
 
 from geoalchemy2 import Geometry
 from geoalchemy2.shape import to_shape, from_shape
@@ -161,11 +160,17 @@ class GeometrySchema(Schema):
     }
 
     type = fields.Str(required=True, validate=OneOf(schema_map.keys()))
+    coordinates = fields.Raw(required=True)
 
     def load(self, data, *, many=None, **kwargs):
         geometry_type = super().load(data, many=many, unknown=EXCLUDE)["type"]
         schema = self.schema_map[geometry_type]
         return schema(many=many, **kwargs).load(data)
+
+    def validate(self, data, *, many=None, partial=None):
+        geometry_type = super().load(data, many=many, unknown=EXCLUDE)["type"]
+        schema = self.schema_map[geometry_type]
+        return schema(many=many, partial=partial).validate(data)
 
 
 class FeatureSchema(Schema):
