@@ -7,7 +7,7 @@
 - Ajout de la compatibilité avec Debian 13 (#48 par @Pierre-Narcisi)
 - Suppression de la dépendance avec `marshmallow-geojson` (#49 par @jacquesfize)
 - Ajout de la méthode `row_to_geojson` pour transformer un résultat de `db.session.execute`
- avec une geom vers un GeoJSON (#44 par @jacquesfize)
+ avec une géométrie vers un GeoJSON (#44 par @jacquesfize)
 
 ## 0.3.3 (2025-05-20)
 
