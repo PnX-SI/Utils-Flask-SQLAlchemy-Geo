@@ -1,5 +1,14 @@
 # CHANGELOG
 
+## 0.3.4 (2026-01-15)
+
+**🚀 Nouveautés**
+
+- Ajout de la compatibilité avec Debian 13 (#48 par @Pierre-Narcisi)
+- Suppression de la dépendance avec `marshmallow-geojson` (#49 par @jacquesfize)
+- Ajout de la méthode `row_to_geojson` pour transformer un résultat de `db.session.execute`
+ avec une geom vers un GeoJSON (#44 par @jacquesfize)
+
 ## 0.3.3 (2025-05-20)
 
 **🚀 Nouveautés**
