@@ -16,6 +16,7 @@ from shapely.errors import ShapelyError
 from .utils import JsonifiableGenerator, GeneratorField
 
 from marshmallow import Schema, fields, validates, ValidationError
+from marshmallow.validate import Equal
 
 
 class GeometryType(Enum):
@@ -60,14 +61,14 @@ class PositionField(fields.Field):
 class PointSchema(Schema):
     """Schema for GeoJSON Point geometry"""
 
-    type = fields.Constant("Point", required=True)
+    type = fields.Constant("Point", validate=Equal("Point"))
     coordinates = PositionField(required=True)
 
 
 class MultiPointSchema(Schema):
     """Schema for GeoJSON MultiPoint geometry"""
 
-    type = fields.Constant("MultiPoint", required=True)
+    type = fields.Constant("MultiPoint", validate=Equal("MultiPoint"))
     coordinates = fields.List(PositionField(), required=True)
 
     @validates("coordinates")
@@ -79,7 +80,7 @@ class MultiPointSchema(Schema):
 class LineStringSchema(Schema):
     """Schema for GeoJSON LineString geometry"""
 
-    type = fields.Constant("LineString", required=True)
+    type = fields.Constant("LineString", validate=Equal("LineString"))
     coordinates = fields.List(PositionField(), required=True)
 
     @validates("coordinates")
@@ -91,7 +92,7 @@ class LineStringSchema(Schema):
 class MultiLineStringSchema(Schema):
     """Schema for GeoJSON MultiLineString geometry"""
 
-    type = fields.Constant("MultiLineString", required=True)
+    type = fields.Constant("MultiLineString", validate=Equal("MultiLineString"))
     coordinates = fields.List(fields.List(PositionField()), required=True)
 
     @validates("coordinates")
@@ -107,7 +108,7 @@ class MultiLineStringSchema(Schema):
 class PolygonSchema(Schema):
     """Schema for GeoJSON Polygon geometry"""
 
-    type = fields.Constant("Polygon", required=True)
+    type = fields.Constant("Polygon", validate=Equal("Polygon"))
     coordinates = fields.List(fields.List(PositionField()), required=True)
 
     @validates("coordinates")
@@ -129,7 +130,7 @@ class PolygonSchema(Schema):
 class MultiPolygonSchema(Schema):
     """Schema for GeoJSON MultiPolygon geometry"""
 
-    type = fields.Constant("MultiPolygon", required=True)
+    type = fields.Constant("MultiPolygon", validate=Equal("MultiPolygon"))
     coordinates = fields.List(fields.List(fields.List(PositionField())), required=True)
 
     @validates("coordinates")
@@ -175,14 +176,14 @@ class GeometrySchema(Schema):
 
 class FeatureSchema(Schema):
     id = fields.Field()
-    type = fields.Constant("Feature", required=True)
+    type = fields.Constant("Feature", validate=Equal("Feature"))
     # note: geometry validity done by GeometryField deserialization
     geometry = fields.Dict(required=True, allow_none=True)
     properties = fields.Dict(required=True)
 
 
 class FeatureCollectionSchema(Schema):
-    type = fields.Constant("FeatureCollection", required=True)
+    type = fields.Constant("FeatureCollection", validate=Equal("FeatureCollection"))
     features = GeneratorField(fields.Nested(FeatureSchema), required=True)
 
 
