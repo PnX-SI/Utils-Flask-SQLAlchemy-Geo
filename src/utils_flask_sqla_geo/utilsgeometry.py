@@ -633,6 +633,8 @@ def parse_geom(geom: Union[GeoJSON, WKBElement, bytes]):
     If the geometry object is a GeoJSON dict, it is validated and returned as is.
     """
     if isinstance(geom, WKBElement) or isinstance(geom, bytes):
+        if isinstance(geom, WKBElement):
+            geom = str(geom)
         return json.loads(to_geojson(from_wkb(geom)))
     if isinstance(geom, dict):
         return valid_GeoJSON(geom)
@@ -650,7 +652,12 @@ def parse_geom(geom: Union[GeoJSON, WKBElement, bytes]):
     )
 
 
-def rows_to_geojson(rows: List[sqlalchemy.engine.Row], geom_field: str) -> dict:
+def rows_to_geojson(
+    rows: List[sqlalchemy.engine.Row],
+    geom_field: str,
+    nest_properties=False,
+    nesting_prefix_separator=".",
+) -> dict:
     """
     Convert a list of SQLAlchemy rows into a GeoJSON FeatureCollection.
 
@@ -660,6 +667,13 @@ def rows_to_geojson(rows: List[sqlalchemy.engine.Row], geom_field: str) -> dict:
         A list of SQLAlchemy rows to convert.
     geom_field : str
         The name of the field containing the geometry.
+    nest_properties : bool, optional
+        If True, properties sharing a same prefix are nested. The default is False. Applied to properties with
+        keys with identical prefix separated by "."(can be overridden with prefix_separator)
+        For example: {"last_validation.date": "2022-01-01", "last_validation.cd_nomenclature": "2"} will be converted to
+        {"last_validation": {"date": "2022-01-01", "cd_nomenclature": "2"}}
+    nesting_prefix_separator : str, optional
+        The separator used to unnest the properties returned by the query results. The default is "."
 
     Returns
     -------
@@ -682,7 +696,8 @@ def rows_to_geojson(rows: List[sqlalchemy.engine.Row], geom_field: str) -> dict:
             geometry = None
 
         properties = {k: v for k, v in row.items() if k != geom_field}
-
+        if nest_properties:
+            properties = _nest_properties(properties, nesting_prefix_separator)
         features.append(
             {
                 "type": "Feature",
@@ -695,3 +710,24 @@ def rows_to_geojson(rows: List[sqlalchemy.engine.Row], geom_field: str) -> dict:
         "type": "FeatureCollection",
         "features": features,
     }
+
+
+def _nest_properties(properties: dict, prefix_separator="."):
+    """
+    If multiple property names begin with the same prefix, the properties are merged
+    under the same key (= to the prefix). Prefixes are identified by the first part of the key which
+    is delimited by a point
+    """
+    result = {}
+
+    for key, value in properties.items():
+        if prefix_separator in key:
+            prefix, suffix = key.split(prefix_separator, 1)
+            if prefix not in result:
+                result[prefix] = {}
+
+            result[prefix][suffix] = value
+        else:
+            result[key] = value
+
+    return result
