@@ -303,8 +303,7 @@ def txt_query_as_geojson(
     if not keep_id_col:
         q_rm_col.append("'" + id_col + "'")
 
-    statement = text(
-        """
+    statement = text("""
         SELECT jsonb_build_object(
             'type',     'FeatureCollection',
             'features', jsonb_agg(feature)
@@ -319,10 +318,7 @@ def txt_query_as_geojson(
         FROM (
             {query}
         ) row) features;
-    """.format(
-            id_col=id_col, q_asgeojson=q_asgeojson, q_rm_col=" - ".join(q_rm_col), query=query
-        )
-    )
+    """.format(id_col=id_col, q_asgeojson=q_asgeojson, q_rm_col=" - ".join(q_rm_col), query=query))
 
     results = session.execute(statement)
     for r in results:
