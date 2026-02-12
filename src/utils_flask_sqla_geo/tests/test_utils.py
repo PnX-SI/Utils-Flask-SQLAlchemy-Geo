@@ -320,3 +320,20 @@ class TestRowsToGeoJSON:
         properties = result["features"][0]["properties"]
         assert "geom" not in properties
         assert "data" in properties
+
+    def test_add_id_in_properties(self):
+        """Test unnesting with mix of nested and non-nested properties"""
+        mock_row = Mock()
+        mock_row._mapping = {
+            "geom": {"type": "Point", "coordinates": [100.0, 0.0]},
+            "metadata.author": "John",
+            "metadata.date": "2022-01-01",
+            "id": 1,
+            "name": "Test",
+        }
+
+        result = rows_to_geojson([mock_row], "geom", nest_properties=True, id_field="id")
+
+        properties = result["features"][0]
+        assert "id" in properties
+        assert properties["id"] == 1
