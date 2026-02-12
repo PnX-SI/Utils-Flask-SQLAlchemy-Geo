@@ -657,6 +657,7 @@ def rows_to_geojson(
     geom_field: str,
     nest_properties=False,
     nesting_prefix_separator=".",
+    id_field=None,
 ) -> dict:
     """
     Convert a list of SQLAlchemy rows into a GeoJSON FeatureCollection.
@@ -703,8 +704,10 @@ def rows_to_geojson(
                 "type": "Feature",
                 "geometry": geometry,
                 "properties": properties,
-            }
+            },
         )
+        if id_field and id_field in row:
+            features[-1]["id"] = row[id_field]
 
     return {
         "type": "FeatureCollection",
