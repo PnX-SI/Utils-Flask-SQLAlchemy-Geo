@@ -102,7 +102,100 @@ class TestParseGeom:
 class TestRowsToGeoJSON:
     """Tests for rows_to_geojson function"""
 
-    # ... (existing tests remain the same) ...
+    def test_single_row_with_geometry(self):
+        """Test converting single row with geometry"""
+        mock_row = Mock()
+        mock_row._mapping = {
+            "geom": {"type": "Point", "coordinates": [100.0, 0.0]},
+            "name": "Test Point",
+            "id": 1,
+        }
+
+        result = rows_to_geojson([mock_row], "geom")
+
+        assert result["type"] == "FeatureCollection"
+        assert len(result["features"]) == 1
+        assert result["features"][0]["type"] == "Feature"
+        assert result["features"][0]["geometry"]["type"] == "Point"
+        assert result["features"][0]["properties"]["name"] == "Test Point"
+        assert result["features"][0]["properties"]["id"] == 1
+        assert "geom" not in result["features"][0]["properties"]
+
+    def test_multiple_rows(self):
+        """Test converting multiple rows"""
+        mock_row1 = Mock()
+        mock_row1._mapping = {
+            "geom": {"type": "Point", "coordinates": [100.0, 0.0]},
+            "name": "Point 1",
+        }
+
+        mock_row2 = Mock()
+        mock_row2._mapping = {
+            "geom": {"type": "Point", "coordinates": [101.0, 1.0]},
+            "name": "Point 2",
+        }
+
+        result = rows_to_geojson([mock_row1, mock_row2], "geom")
+
+        assert len(result["features"]) == 2
+        assert result["features"][0]["properties"]["name"] == "Point 1"
+        assert result["features"][1]["properties"]["name"] == "Point 2"
+
+    def test_row_without_geometry(self):
+        """Test converting row without geometry field"""
+        mock_row = Mock()
+        mock_row._mapping = {"name": "No Geometry", "id": 1}
+
+        result = rows_to_geojson([mock_row], "geom")
+
+        assert len(result["features"]) == 1
+        assert result["features"][0]["geometry"] is None
+        assert result["features"][0]["properties"]["name"] == "No Geometry"
+
+    def test_empty_rows(self):
+        """Test converting empty list of rows"""
+        result = rows_to_geojson([], "geom")
+
+        assert result["type"] == "FeatureCollection"
+        assert result["features"] == []
+
+    def test_row_with_null_geometry(self):
+        """Test converting row with null geometry"""
+        mock_row = Mock()
+        mock_row._mapping = {"geom": None, "name": "Null Geometry"}
+
+        result = rows_to_geojson([mock_row], "geom")
+
+        assert result["features"][0]["geometry"] is None
+
+    def test_row_with_string_geometry(self):
+        """Test converting row with geometry as string"""
+        mock_row = Mock()
+        mock_row._mapping = {
+            "geom": '{"type": "Point", "coordinates": [100.0, 0.0]}',
+            "name": "String Geometry",
+        }
+
+        result = rows_to_geojson([mock_row], "geom")
+
+        assert result["features"][0]["geometry"]["type"] == "Point"
+        assert result["features"][0]["geometry"]["coordinates"] == [100.0, 0.0]
+
+    def test_properties_exclude_geometry_field(self):
+        """Test that geometry field is excluded from properties"""
+        mock_row = Mock()
+        mock_row._mapping = {
+            "geom": {"type": "Point", "coordinates": [100.0, 0.0]},
+            "prop1": "value1",
+            "prop2": "value2",
+        }
+
+        result = rows_to_geojson([mock_row], "geom")
+
+        properties = result["features"][0]["properties"]
+        assert "geom" not in properties
+        assert "prop1" in properties
+        assert "prop2" in properties
 
     def test_unnest_properties_with_dot_separator(self):
         """Test nesting properties with dot separator"""
