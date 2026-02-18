@@ -1,28 +1,153 @@
+import collections
 from enum import Enum
 
 from marshmallow import Schema, fields, RAISE, EXCLUDE
 from marshmallow.decorators import pre_load, post_dump
 from marshmallow.validate import OneOf, Range
-from marshmallow.exceptions import ValidationError
 
 from geoalchemy2 import Geometry
 from geoalchemy2.shape import to_shape, from_shape
 from marshmallow_sqlalchemy.schema import SQLAlchemyAutoSchema, SQLAlchemyAutoSchemaOpts
 from marshmallow_sqlalchemy.convert import ModelConverter
-from marshmallow_geojson import (
-    GeometryType,
-    PointSchema,
-    MultiPointSchema,
-    PolygonSchema,
-    MultiPolygonSchema,
-    LineStringSchema,
-    MultiLineStringSchema,
-)
 from shapely.geometry import shape
 from shapely import wkt
 from shapely.errors import ShapelyError
 
 from .utils import JsonifiableGenerator, GeneratorField
+
+from marshmallow import Schema, fields, validates, ValidationError
+from marshmallow.validate import Equal
+
+
+class GeometryType(Enum):
+
+    point = "Point"
+    multi_point = "MultiPoint"
+    line_string = "LineString"
+    multi_line_string = "MultiLineString"
+    polygon = "Polygon"
+    multi_polygon = "MultiPolygon"
+    geometry_collection = "GeometryCollection"
+
+
+class PositionField(fields.Field):
+    """Field for validating GeoJSON position (longitude, latitude, [altitude])"""
+
+    def _deserialize(self, value, attr, data, **kwargs):
+        if not isinstance(value, collections.abc.Iterable):
+            raise ValidationError("Position must be a list")
+
+        if len(value) < 2:
+            raise ValidationError("Position must have at least 2 coordinates")
+
+        if len(value) > 3:
+            raise ValidationError("Position must have at most 3 coordinates")
+
+        for coord in value:
+            if not isinstance(coord, (int, float)):
+                raise ValidationError("Position coordinates must be numbers")
+
+        # Validate longitude range
+        if not -180 <= value[0] <= 180:
+            raise ValidationError("Longitude must be between -180 and 180")
+
+        # Validate latitude range
+        if not -90 <= value[1] <= 90:
+            raise ValidationError("Latitude must be between -90 and 90")
+
+        return value
+
+
+class PointSchema(Schema):
+    """Schema for GeoJSON Point geometry"""
+
+    type = fields.Constant("Point", validate=Equal("Point"))
+    coordinates = PositionField(required=True)
+
+
+class MultiPointSchema(Schema):
+    """Schema for GeoJSON MultiPoint geometry"""
+
+    type = fields.Constant("MultiPoint", validate=Equal("MultiPoint"))
+    coordinates = fields.List(PositionField(), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value, **kwargs):
+        if len(value) == 0:
+            raise ValidationError("MultiPoint must have at least one position")
+
+
+class LineStringSchema(Schema):
+    """Schema for GeoJSON LineString geometry"""
+
+    type = fields.Constant("LineString", validate=Equal("LineString"))
+    coordinates = fields.List(PositionField(), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value, **kwargs):
+        if len(value) < 2:
+            raise ValidationError("LineString must have at least 2 positions")
+
+
+class MultiLineStringSchema(Schema):
+    """Schema for GeoJSON MultiLineString geometry"""
+
+    type = fields.Constant("MultiLineString", validate=Equal("MultiLineString"))
+    coordinates = fields.List(fields.List(PositionField()), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value, **kwargs):
+        if len(value) == 0:
+            raise ValidationError("MultiLineString must have at least one LineString")
+
+        for linestring in value:
+            if len(linestring) < 2:
+                raise ValidationError("Each LineString must have at least 2 positions")
+
+
+class PolygonSchema(Schema):
+    """Schema for GeoJSON Polygon geometry"""
+
+    type = fields.Constant("Polygon", validate=Equal("Polygon"))
+    coordinates = fields.List(fields.List(PositionField()), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value, **kwargs):
+        if len(value) == 0:
+            raise ValidationError("Polygon must have at least one linear ring")
+
+        for ring in value:
+            if len(ring) < 4:
+                raise ValidationError("Linear ring must have at least 4 positions")
+
+            # Verify ring is closed (first and last positions are the same)
+            if ring[0] != ring[-1]:
+                raise ValidationError(
+                    "Linear ring must be closed (first and last positions must match)"
+                )
+
+
+class MultiPolygonSchema(Schema):
+    """Schema for GeoJSON MultiPolygon geometry"""
+
+    type = fields.Constant("MultiPolygon", validate=Equal("MultiPolygon"))
+    coordinates = fields.List(fields.List(fields.List(PositionField())), required=True)
+
+    @validates("coordinates")
+    def validate_coordinates(self, value, **kwargs):
+        if len(value) == 0:
+            raise ValidationError("MultiPolygon must have at least one Polygon")
+
+        for polygon in value:
+            if len(polygon) == 0:
+                raise ValidationError("Each Polygon must have at least one linear ring")
+
+            for ring in polygon:
+                if len(ring) < 4:
+                    raise ValidationError("Linear ring must have at least 4 positions")
+
+                if ring[0] != ring[-1]:
+                    raise ValidationError("Linear ring must be closed")
 
 
 class GeometrySchema(Schema):
@@ -36,23 +161,29 @@ class GeometrySchema(Schema):
     }
 
     type = fields.Str(required=True, validate=OneOf(schema_map.keys()))
+    coordinates = fields.Raw(required=True)
 
     def load(self, data, *, many=None, **kwargs):
         geometry_type = super().load(data, many=many, unknown=EXCLUDE)["type"]
         schema = self.schema_map[geometry_type]
         return schema(many=many, **kwargs).load(data)
 
+    def validate(self, data, *, many=None, partial=None):
+        geometry_type = super().load(data, many=many, unknown=EXCLUDE)["type"]
+        schema = self.schema_map[geometry_type]
+        return schema(many=many, partial=partial).validate(data)
+
 
 class FeatureSchema(Schema):
     id = fields.Field()
-    type = fields.Constant("Feature", required=True)
+    type = fields.Constant("Feature", validate=Equal("Feature"))
     # note: geometry validity done by GeometryField deserialization
-    geometry = fields.Mapping(required=True, allow_none=True)
-    properties = fields.Mapping(required=True)
+    geometry = fields.Dict(required=True, allow_none=True)
+    properties = fields.Dict(required=True)
 
 
 class FeatureCollectionSchema(Schema):
-    type = fields.Constant("FeatureCollection", required=True)
+    type = fields.Constant("FeatureCollection", validate=Equal("FeatureCollection"))
     features = GeneratorField(fields.Nested(FeatureSchema), required=True)
 
 
@@ -205,7 +336,7 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
             result = super(GeoAlchemyAutoSchema, self)._serialize(obj, many=False)
             return result
 
-    @post_dump(pass_many=True)
+    @post_dump(pass_collection=True)
     def to_geojson(self, data, many, **kwargs):
         if self.as_geojson:
             if many:
@@ -220,7 +351,7 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
                 data = JsonifiableGenerator(data)
             return data
 
-    @pre_load(pass_many=True)
+    @pre_load(pass_collection=True)
     def from_geojson(self, data, many, **kwargs):
         if not self.as_geojson:
             return data

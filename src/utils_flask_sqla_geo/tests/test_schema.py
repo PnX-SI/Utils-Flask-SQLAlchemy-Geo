@@ -15,7 +15,6 @@ from shapely.geometry import Point
 from utils_flask_sqla.schema import SmartRelationshipsMixin
 from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema
 
-
 # TODO:
 # - Test other geometries than Point & Polygon
 # - Test relationships

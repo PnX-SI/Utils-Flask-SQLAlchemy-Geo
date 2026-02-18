@@ -8,7 +8,6 @@ from geoalchemy2 import Geometry
 
 from utils_flask_sqla_geo.serializers import geoserializable
 
-
 db = SQLAlchemy()
 
 
