@@ -6,6 +6,7 @@ from shapely.geometry import Point, LineString
 from shapely import to_wkb
 
 from utils_flask_sqla_geo.utilsgeometry import valid_GeoJSON, parse_geom, rows_to_geojson
+from utils_flask_sqla_geo.generic import get_geojson_feature
 
 # Assuming the functions are in a module called 'geo_utils'
 # from geo_utils import validGeoJSON, parseGeom, rows_to_geojson
@@ -337,3 +338,11 @@ class TestRowsToGeoJSON:
         properties = result["features"][0]
         assert "id" in properties
         assert properties["id"] == 1
+
+
+class TestGeoJSONSerializaion:
+    def test_get_geojson_feature():
+        # geom with 15 decimal -> [6.053217351436615, 44.57642231193401]
+        wkb = WKBElement("0101000020e61000000000009c7e3618407c38d134c8494640")
+        feature = get_geojson_feature(wkb)
+        assert len(repr(feature["geometry"]).split(".")[1]) == 15
