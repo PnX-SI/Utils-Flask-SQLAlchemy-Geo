@@ -198,7 +198,7 @@ class GeometryField(fields.Field):
 
     def _deserialize_wkt(self, value, attr, data, **kwargs):
         try:
-            return wkt.loads(value)
+            return from_shape(wkt.loads(value))
         except ShapelyError as error:
             raise ValidationError("Invalid geometry.") from error
 
