@@ -286,7 +286,7 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
         feature_geometry=None,
         only=None,
         exclude=(),
-        **kwargs
+        **kwargs,
     ):
         excluded_geometry_fields = self.opts.geometry_fields.copy()
         if only is not None:
