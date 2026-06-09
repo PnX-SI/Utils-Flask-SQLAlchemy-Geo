@@ -1,13 +1,57 @@
-[tool.pytest.ini_options]
-minversion = "6.0"
-testpaths = [
-    "src",
+[build-system]
+requires = ["setuptools>=77.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "utils-flask-sqlalchemy-geo"
+dynamic = ["version"]
+description = "Python lib of tools for Flask and SQLAlchemy (extension geometry)"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "sqlalchemy<2",
+    "fiona",
+    "geoalchemy2>=0.4.0",
+    "shapely",
+    "utils-flask-sqlalchemy>=0.4.2",
+    "marshmallow",
+    "marshmallow_sqlalchemy",
+    "geojson",
+]
+license = { text = "GNU Affero General Public License v3" }
+maintainers = [
+    { name = "Parcs nationaux des Écrins et des Cévennes", email = "geonature@ecrins-parcnational.fr" }
+]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.10",
+    "License :: OSI Approved :: GNU Affero General Public License v3",
+    "Operating System :: OS Independent",
 ]
 
+[project.urls]
+Homepage = "https://github.com/PnX-SI/Utils-Flask-SQLAlchemy-Geo"
+
+[project.optional-dependencies]
+tests = ["pytest", "flask-sqlalchemy"]
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { file = "VERSION" }
+
+[tool.pytest.ini_options]
+minversion = "6.0"
+testpaths = ["src"]
+
 [tool.coverage.run]
-omit = [
-    "*/tests/*",
-]
+omit = ["*/tests/*"]
 
 [tool.black]
 line-length = 99
