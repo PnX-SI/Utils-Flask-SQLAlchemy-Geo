@@ -17,10 +17,10 @@ jobs:
     strategy:
       matrix:
         python-version: ["3.11", "3.13"]
-        sqlalchemy-version: ["1.4"]
+        sqlalchemy-version: ["2.0"]
         include:
-          - sqlalchemy-version: "1.4"
-            sqlalchemy-lt-version: "2.0"
+          - sqlalchemy-version: "2.0"
+            sqlalchemy-lt-version: "3.0"
             flask-sqlalchemy-version: "3.0"
             flask-sqlalchemy-lt-version: "4.0"
             flask-version: "3.0"
