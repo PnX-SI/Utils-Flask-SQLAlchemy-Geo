@@ -9,7 +9,7 @@ description = "Python lib of tools for Flask and SQLAlchemy (extension geometry)
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "sqlalchemy<2",
+    "sqlalchemy<3",
     "fiona",
     "geoalchemy2>=0.4.0",
     "shapely",
