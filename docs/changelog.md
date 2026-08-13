@@ -1,5 +1,11 @@
 # CHANGELOG
 
+## 0.4.0 (unreleased)
+
+**🚀 Nouveautés**
+
+- Ajout de la compatibilité avec SQLAlchemy 2.0.x (#56 par @jacquesfize)
+
 ## 0.3.4 (2026-01-15)
 
 **🚀 Nouveautés**
