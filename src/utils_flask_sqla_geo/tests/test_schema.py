@@ -201,7 +201,7 @@ class TestGeoSchema:
                 "geom": "POINT (6 10)",
             }
         )
-        assert p["geom"] == Point(6, 10)
+        assert to_shape(p["geom"]).equals(Point(6, 10))
 
     def test_from_json_unexpected_geom(self):
         with pytest.raises(ValidationError, match="'geom': \\['Unknown field.'\\]"):
