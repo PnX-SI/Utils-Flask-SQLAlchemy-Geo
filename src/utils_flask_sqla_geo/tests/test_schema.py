@@ -8,6 +8,7 @@ from marshmallow.exceptions import ValidationError
 import sqlalchemy as sa
 from sqlalchemy import Column, Integer, String
 from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.dialects.postgresql import JSONB
 from geoalchemy2 import Geometry
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import Point
@@ -443,6 +444,72 @@ class TestGeoSchema:
         }
         assert schema1.dump(b) == expected
         assert schema2.dump(b) == expected
+
+    def test_st_asgeojson_geometries(self):
+        class ModelB(Base):
+            __tablename__ = "table_st_asgeojson"
+            pk = Column(Integer, primary_key=True)
+            name = Column(String)
+            st_asgeojson = Column(String)
+
+        class ModelBSchema1(GeoAlchemyAutoSchema):
+            class Meta:
+                model = ModelB
+                include_fk = True
+                feature_geometry = "st_asgeojson"
+
+        schema1 = ModelBSchema1(as_geojson=True, feature_geometry="st_asgeojson")
+
+        b = ModelB(
+            pk=1,
+            name="b1",
+            st_asgeojson=json.dumps({"type": "Point", "coordinates": [3.7, 44.4]}),
+        )
+        expected = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [3.7, 44.4],
+            },
+            "properties": {
+                "pk": 1,
+                "name": "b1",
+            },
+        }
+        assert schema1.dump(b) == expected
+
+    def test_geojson_geometries(self):
+        class ModelB(Base):
+            __tablename__ = "table_geojson"
+            pk = Column(Integer, primary_key=True)
+            name = Column(String)
+            geojson = Column(JSONB)
+
+        class ModelBSchema1(GeoAlchemyAutoSchema):
+            class Meta:
+                model = ModelB
+                include_fk = True
+                feature_geometry = "geojson"
+
+        schema1 = ModelBSchema1(as_geojson=True, feature_geometry="geojson")
+
+        b = ModelB(
+            pk=1,
+            name="b1",
+            geojson={"type": "Point", "coordinates": [3.7, 44.4]},
+        )
+        expected = {
+            "type": "Feature",
+            "geometry": {
+                "type": "Point",
+                "coordinates": [3.7, 44.4],
+            },
+            "properties": {
+                "pk": 1,
+                "name": "b1",
+            },
+        }
+        assert schema1.dump(b) == expected
 
     def test_generator_json(self):
         def generate_objects():

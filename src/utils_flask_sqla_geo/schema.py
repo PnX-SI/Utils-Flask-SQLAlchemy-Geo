@@ -1,6 +1,6 @@
 import collections
 from enum import Enum
-
+import json
 from marshmallow import Schema, fields, RAISE, EXCLUDE
 from marshmallow.decorators import pre_load, post_dump
 from marshmallow.validate import OneOf, Range
@@ -297,8 +297,18 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
         if as_geojson:
             self.feature_id = feature_id or self.opts.feature_id
             self.feature_geometry = feature_geometry or self.opts.feature_geometry
+
             if not self.feature_geometry:
                 raise TypeError("Missing 'feature_geometry'")
+
+            # Test type du champ feature_geometry
+            # si de type text on considère qu'il correspond au retour de la fonction st_asgeojson de postgis
+            #       dans ce cas la valeur doit être transformée en json
+            if type(self._declared_fields[self.feature_geometry]) is fields.String:
+                self.to_geometry = lambda val: json.loads(val)
+            else:
+                self.to_geometry = lambda val: val
+
             # Add feature geometry to serialized fields
             exclude.discard(self.feature_geometry)
             if only is not None:
@@ -308,8 +318,9 @@ class GeoAlchemyAutoSchema(SQLAlchemyAutoSchema):
     def to_feature(self, properties):
         feature = {
             "properties": properties,
-            "geometry": properties.pop(self.feature_geometry),
+            "geometry": self.to_geometry(properties.pop(self.feature_geometry)),
         }
+
         if self.feature_id and self.feature_id in properties:
             feature.update(
                 {
