@@ -2,6 +2,7 @@ import json
 import pytest
 from unittest.mock import Mock, MagicMock
 from geoalchemy2 import WKBElement
+from geoalchemy2.shape import from_shape
 from shapely.geometry import Point, LineString
 from shapely import to_wkb
 
@@ -58,6 +59,11 @@ class TestParseGeom:
         assert isinstance(result, dict)
         assert result["type"] == "Point"
         assert result["coordinates"] == [100.0, 0.0]
+
+    def test_geoalchemy_wkbelement_input(self):
+        """Test parsing a GeoAlchemy2 WKBElement"""
+        result = parse_geom(from_shape(Point(100.0, 0.0), srid=4326))
+        assert result == {"type": "Point", "coordinates": [100.0, 0.0]}
 
     def test_dict_input_valid(self):
         """Test parsing valid GeoJSON dict"""

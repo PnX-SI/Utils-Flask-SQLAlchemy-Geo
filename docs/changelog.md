@@ -7,6 +7,7 @@
 - Abandon du support de Python 3.9, Python 3.10 minimum requis (#55 par @jacquesfize)
 - Migration de la configuration du paquet de `setup.py` et `requirements.in` vers `pyproject.toml` (#55 par @jacquesfize)
 - Passage à `utils-flask-sqlalchemy>=0.5.0` et mise à jour des dépendances (ajout d'un `uv.lock`) (#57)
+- Augmentation de la couverture de tests (#58 par @jacquesfize)
 
 ## 0.3.4 (2026-01-15)
 
