@@ -154,7 +154,7 @@ def shapeserializable(cls):
         fields = list(fields)
 
         if fields:
-            db_cols = [db_col for db_col in fields in cls.__mapper__.c if db_col.key in fields]
+            db_cols = [db_col for db_col in cls.__mapper__.c if db_col.key in fields]
         else:
             db_cols = cls.__mapper__.c
 
@@ -162,9 +162,14 @@ def shapeserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
-            FionaShapeService.create_feature(d, geom)
+            if geom is None:
+                continue
+            properties = d.as_dict(fields=fields or None)
+            properties = {
+                key: value for key, value in properties.items() if key in FionaShapeService.columns
+            }
+            FionaShapeService.create_feature(properties, geom)
 
         FionaShapeService.save_and_zip_shapefiles()
 
@@ -219,7 +224,7 @@ def geofileserializable(cls):
         fields = list(fields)
 
         if fields:
-            db_cols = [db_col for db_col in fields in cls.__mapper__.c if db_col.key in fields]
+            db_cols = [db_col for db_col in cls.__mapper__.c if db_col.key in fields]
         else:
             db_cols = cls.__mapper__.c
 
@@ -232,9 +237,14 @@ def geofileserializable(cls):
             db_cols=db_cols, dir_path=dir_path, file_name=file_name, srid=srid
         )
         for d in data:
-            d = d.as_dict(fields)
             geom = getattr(d, geom_col)
-            fionaService.create_feature(d, geom)
+            if geom is None:
+                continue
+            properties = d.as_dict(fields=fields or None)
+            properties = {
+                key: value for key, value in properties.items() if key in fionaService.columns
+            }
+            fionaService.create_feature(properties, geom)
 
         fionaService.save_files()
 
@@ -294,9 +304,9 @@ def txt_query_as_geojson(
         q_geom = geom_col
     else:
         if geom_srid == 4326:
-            q_geom = "ST_AsGeoJSON({})".format(geom_col)
+            q_geom = "ST_AsGeoJSON({}::geometry)".format(geom_col)
         else:
-            q_geom = "ST_AsGeoJSON(st_transform({}, 4326))".format(geom_col)
+            q_geom = "ST_AsGeoJSON(st_transform({}::geometry, 4326))".format(geom_col)
     q_asgeojson = "{}::jsonb".format(q_geom)
 
     q_rm_col = ["'" + geom_col + "'"]

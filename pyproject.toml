@@ -51,6 +51,7 @@ minversion = "6.0"
 testpaths = ["src"]
 
 [tool.coverage.run]
+source_pkgs = ["utils_flask_sqla_geo"]
 omit = ["*/tests/*"]
 
 [tool.black]

@@ -115,7 +115,7 @@ def export_json(
     """
 
     # gestion de only
-    only = columns
+    only = columns.copy()
 
     # ajout du champs geométrique si demandé (sera exporté en WKT)
     if geometry_field_name:

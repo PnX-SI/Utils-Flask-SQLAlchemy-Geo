@@ -500,13 +500,14 @@ def convert_to_2d(geojson):
     """
     Convert a geojson 3d in 2d
     """
-    # if its a Linestring, Polygon etc...
-    if geojson["coordinates"][0] is list:
-        two_d_coordinates = [[coord[0], coord[1]] for coord in geojson["coordinates"]]
-    else:
-        two_d_coordinates = [geojson["coordinates"][0], geojson["coordinates"][1]]
 
-    geojson["coordinates"] = two_d_coordinates
+    def _to_2d(coordinates):
+        # if its a Linestring, Polygon etc... coordinates are nested
+        if isinstance(coordinates[0], (list, tuple)):
+            return [_to_2d(coord) for coord in coordinates]
+        return [coordinates[0], coordinates[1]]
+
+    geojson["coordinates"] = _to_2d(geojson["coordinates"])
 
 
 def remove_third_dimension(geom):

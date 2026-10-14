@@ -13,7 +13,7 @@ from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import Point
 
 from utils_flask_sqla.schema import SmartRelationshipsMixin
-from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema
+from utils_flask_sqla_geo.schema import GeoAlchemyAutoSchema, GeometrySchema
 
 # TODO:
 # - Test other geometries than Point & Polygon
@@ -497,3 +497,102 @@ class TestGeoSchema:
         d = json.loads(result)
         expected = schema.dump(list(generate_objects()), many=True)
         assert d == expected
+
+
+RING = [[0, 0], [0, 1], [1, 1], [1, 0], [0, 0]]
+
+
+class TestGeometrySchema:
+    @pytest.mark.parametrize(
+        "geometry",
+        [
+            {"type": "Point", "coordinates": [6, 10]},
+            {"type": "Point", "coordinates": [6, 10, 1000]},
+            {"type": "MultiPoint", "coordinates": [[6, 10], [7, 11]]},
+            {"type": "LineString", "coordinates": [[0, 0], [1, 1]]},
+            {"type": "MultiLineString", "coordinates": [[[0, 0], [1, 1]], [[2, 2], [3, 3]]]},
+            {"type": "Polygon", "coordinates": [RING]},
+            {"type": "MultiPolygon", "coordinates": [[RING], [RING]]},
+        ],
+        ids=lambda g: g["type"],
+    )
+    def test_valid(self, geometry):
+        assert GeometrySchema().validate(geometry) == {}
+        assert GeometrySchema().load(geometry) == geometry
+
+    @pytest.mark.parametrize(
+        "geometry,message",
+        [
+            ({"type": "Point", "coordinates": 6}, "Position must be a list"),
+            ({"type": "Point", "coordinates": [6]}, "at least 2 coordinates"),
+            ({"type": "Point", "coordinates": [6, 10, 1, 2]}, "at most 3 coordinates"),
+            ({"type": "Point", "coordinates": [6, "10"]}, "coordinates must be numbers"),
+            ({"type": "Point", "coordinates": [200, 10]}, "Longitude must be between"),
+            ({"type": "Point", "coordinates": [6, 100]}, "Latitude must be between"),
+            ({"type": "MultiPoint", "coordinates": []}, "at least one position"),
+            ({"type": "LineString", "coordinates": [[0, 0]]}, "at least 2 positions"),
+            ({"type": "MultiLineString", "coordinates": []}, "at least one LineString"),
+            (
+                {"type": "MultiLineString", "coordinates": [[[0, 0], [1, 1]], [[0, 0]]]},
+                "Each LineString must have at least 2 positions",
+            ),
+            ({"type": "Polygon", "coordinates": []}, "at least one linear ring"),
+            ({"type": "Polygon", "coordinates": [RING[:3]]}, "at least 4 positions"),
+            ({"type": "Polygon", "coordinates": [RING[:4]]}, "must be closed"),
+            ({"type": "MultiPolygon", "coordinates": []}, "at least one Polygon"),
+            ({"type": "MultiPolygon", "coordinates": [[]]}, "at least one linear ring"),
+            ({"type": "MultiPolygon", "coordinates": [[RING[:3]]]}, "at least 4 positions"),
+            ({"type": "MultiPolygon", "coordinates": [[RING[:4]]]}, "must be closed"),
+        ],
+    )
+    def test_invalid(self, geometry, message):
+        errors = GeometrySchema().validate(geometry)
+        assert message in str(errors["coordinates"])
+        with pytest.raises(ValidationError, match=message):
+            GeometrySchema().load(geometry)
+
+    def test_unknown_type(self):
+        with pytest.raises(ValidationError, match="type"):
+            GeometrySchema().validate({"type": "Circle", "coordinates": [0, 0]})
+
+
+class TestGeometryField:
+    def test_bound_to_schema(self):
+        schema = ParentSchema(only=["geom"])
+        field = schema.fields["geom"]
+        assert field.name == "geom"
+        assert field.parent is schema
+        assert field.root is schema
+
+    def test_from_geojson_third_dimension(self):
+        with pytest.raises(ValidationError, match="Unexpected third dimension."):
+            ParentSchema(as_geojson=True).load(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Point", "coordinates": [6, 10, 1000]},
+                    "properties": {"pk": 1},
+                }
+            )
+
+    def test_from_geojson_self_intersecting(self):
+        bowtie = [[0, 0], [1, 1], [1, 0], [0, 1], [0, 0]]
+        with pytest.raises(ValidationError, match="Invalid geometry."):
+            ParentSchema(as_geojson=True).load(
+                {
+                    "type": "Feature",
+                    "geometry": {"type": "Polygon", "coordinates": [bowtie]},
+                    "properties": {"pk": 1},
+                }
+            )
+
+    def test_missing_feature_geometry(self):
+        class NoGeom(Base):
+            __tablename__ = "no_geom"
+            pk = Column(Integer, primary_key=True)
+
+        class NoGeomSchema(GeoAlchemyAutoSchema):
+            class Meta:
+                model = NoGeom
+
+        with pytest.raises(TypeError, match="Missing 'feature_geometry'"):
+            NoGeomSchema(as_geojson=True)

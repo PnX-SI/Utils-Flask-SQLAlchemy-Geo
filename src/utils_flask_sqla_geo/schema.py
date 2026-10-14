@@ -214,7 +214,7 @@ class GeometryField(fields.Field):
             raise ValidationError("Invalid geometry.") from error
 
     def _bind_to_schema(self, field_name, schema):
-        super()._bind_to_schema
+        super()._bind_to_schema(field_name, schema)
         if schema.as_geojson:
             self._serialize = self._serialize_geojson
             self._deserialize = self._deserialize_geojson
