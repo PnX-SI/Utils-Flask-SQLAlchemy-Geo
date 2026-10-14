@@ -7,8 +7,12 @@
 import os
 
 from flask_sqlalchemy import SQLAlchemy
+from utils_flask_sqla.tests.utils import TestSession
 
 db = SQLAlchemy()
+# commit()/rollback() only act on savepoints, so the temporary transaction fixtures
+# of the utils_flask_sqla pytest plugin can roll back every change made by the tests
+db.session = db._make_scoped_session({"class_": TestSession})
 
 PG_URI = os.environ.get(
     "TEST_PG_DATABASE_URI",

@@ -1,6 +1,7 @@
 import zipfile
 
 import fiona
+import sqlalchemy as sa
 import pytest
 from geoalchemy2.shape import from_shape
 from shapely.geometry import Point
@@ -144,3 +145,16 @@ class TestGenericQueryGeo:
             "type": "Point",
             "coordinates": (6.0, 10.0),
         }
+
+
+class TestRollback:
+    """Changes committed by a test are rolled back by the utils_flask_sqla temporary
+    transaction fixtures (tests run in definition order)"""
+
+    def test_insert_and_commit(self, db):
+        db.session.execute(sa.text(f"INSERT INTO {SCHEMA}.{TABLE} (id, name) VALUES (5, 'new')"))
+        db.session.commit()
+        assert GenericQueryGeo(db, TABLE, SCHEMA).as_geofeature()["total"] == 5
+
+    def test_insert_was_rolled_back(self, db):
+        assert GenericQueryGeo(db, TABLE, SCHEMA).as_geofeature()["total"] == 4

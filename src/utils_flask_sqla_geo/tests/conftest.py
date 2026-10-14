@@ -5,40 +5,33 @@ os.environ.setdefault("FLASK_SQLALCHEMY_DB", "utils_flask_sqla_geo.tests.geo_tes
 
 import pytest
 from flask import Flask
-from sqlalchemy import create_engine, text
-from sqlalchemy.exc import OperationalError
+from sqlalchemy import text
 
 # ---------------------------------------------------------------------------
-# Tests requiring a PostGIS database use the ``app`` fixture.
-# The database URI can be overridden with the TEST_PG_DATABASE_URI env var, e.g.:
+# Tests require a PostGIS database. Its URI can be overridden with the
+# TEST_PG_DATABASE_URI env var, e.g.:
 #   docker run --rm -p 5432:5432 -e POSTGRES_USER=geonatadmin \
 #       -e POSTGRES_PASSWORD=geonatadmin -e POSTGRES_DB=geonature2db \
 #       postgis/postgis:15-3.4
-# Tests are skipped automatically if no server is reachable.
+#
+# Changes made through db.session are rolled back after each test by the
+# temporary transaction fixtures of the utils_flask_sqla pytest plugin
+# (see utils_flask_sqla/tests/fixtures.py), which rely on the _session fixture.
 # ---------------------------------------------------------------------------
 
 from utils_flask_sqla_geo.tests.geo_test_db import PG_URI, SCHEMA, TABLE, db as _db
 
 
 @pytest.fixture(scope="session")
-def app():
-    engine = create_engine(PG_URI)
-    try:
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-    except OperationalError as exc:
-        pytest.skip(f"PostgreSQL test database not reachable at {PG_URI}: {exc}")
-    finally:
-        engine.dispose()
-
-    db = _db
+def _app():
     app = Flask(__name__)
     app.config["SQLALCHEMY_DATABASE_URI"] = PG_URI
-    db.init_app(app)
+    _db.init_app(app)
 
     with app.app_context():
-        # GenericTable reflects tables with its own connection: data must be committed
-        with db.engine.begin() as conn:
+        # GenericTable reflects tables with its own connection: the test schema is
+        # committed (outside of the rolled back transactions) and dropped at the end
+        with _db.engine.begin() as conn:
             conn.execute(text("CREATE EXTENSION IF NOT EXISTS postgis"))
             conn.execute(text(f"DROP SCHEMA IF EXISTS {SCHEMA} CASCADE"))
             conn.execute(text(f"CREATE SCHEMA {SCHEMA}"))
@@ -60,13 +53,22 @@ def app():
             # table without primary key, to test GenericQueryGeo.get_model fallback
             conn.execute(text(f"CREATE TABLE {SCHEMA}.t_nopk (code text, label text)"))
         yield app
-        db.session.remove()
-        with db.engine.begin() as conn:
+        _db.session.remove()
+        with _db.engine.begin() as conn:
             conn.execute(text(f"DROP SCHEMA {SCHEMA} CASCADE"))
-        db.engine.dispose()
+        _db.engine.dispose()
+
+
+@pytest.fixture(scope="session")
+def _session(_app):
+    return _db.session
+
+
+@pytest.fixture(scope="session", autouse=True)
+def app(_app, _session):
+    return _app
 
 
 @pytest.fixture
 def db(app):
-    yield _db
-    _db.session.rollback()
+    return _db
