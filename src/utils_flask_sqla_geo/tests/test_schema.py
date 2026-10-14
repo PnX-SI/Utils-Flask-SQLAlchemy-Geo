@@ -7,7 +7,7 @@ import marshmallow as ma
 from marshmallow.exceptions import ValidationError
 import sqlalchemy as sa
 from sqlalchemy import Column, Integer, String
-from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import declarative_base
 from geoalchemy2 import Geometry
 from geoalchemy2.shape import from_shape, to_shape
 from shapely.geometry import Point

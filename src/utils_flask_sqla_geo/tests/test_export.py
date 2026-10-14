@@ -4,6 +4,7 @@ import json
 
 import fiona
 import pytest
+import sqlalchemy as sa
 
 from utils_flask_sqla_geo.export import (
     export_csv,
@@ -29,9 +30,14 @@ def schema_class(app):
     return GenericQueryGeo(_db, TABLE, SCHEMA, geometry_field="geom").get_marshmallow_schema()
 
 
+def select_all(db, schema_class):
+    model = schema_class.Meta.model
+    return db.session.scalars(sa.select(model).order_by(model.id))
+
+
 @pytest.fixture
 def query(db, schema_class):
-    return db.session.query(schema_class.Meta.model).order_by("id")
+    return select_all(db, schema_class)
 
 
 def read_csv(fp):
@@ -69,10 +75,13 @@ class TestExportJson:
             {"id": row["id"], "geom": wkt} for row, wkt in zip(ROWS, WKT)
         ]
 
-    def test_default_columns_not_mutated(self, query, schema_class):
-        export_json(query, schema_class, io.StringIO(), geometry_field_name="geom")
+    def test_default_columns_not_mutated(self, db, schema_class):
+        # a result can only be consumed once: use a new one for each export
+        export_json(
+            select_all(db, schema_class), schema_class, io.StringIO(), geometry_field_name="geom"
+        )
         fp = io.StringIO()
-        export_json(query, schema_class, fp)
+        export_json(select_all(db, schema_class), schema_class, fp)
         assert json.loads(fp.getvalue()) == ROWS
 
 

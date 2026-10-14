@@ -32,7 +32,7 @@ class TestGenericTableGeo:
 
     def test_as_geofeature(self, db):
         view = GenericTableGeo(TABLE, SCHEMA, db.engine, geometry_field="geom", srid=4326)
-        rows = {row.id: row for row in db.session.query(view.tableDef)}
+        rows = {row.id: row for row in db.session.execute(sa.select(view.tableDef))}
 
         feature = view.as_geofeature(rows[1])
         assert feature["geometry"] == {"type": "Point", "coordinates": [6.0, 10.0]}
@@ -48,7 +48,7 @@ class TestGenericTableGeo:
 
     def test_as_shape(self, db, tmp_path):
         view = GenericTableGeo(TABLE, SCHEMA, db.engine, geometry_field="geom", srid=4326)
-        data = db.session.query(view.tableDef).all()
+        data = db.session.execute(sa.select(view.tableDef)).all()
         with pytest.warns(DeprecationWarning):
             view.as_shape(view.db_cols, data=data, dir_path=str(tmp_path), file_name="out")
         with zipfile.ZipFile(tmp_path / "out.zip") as zp:
@@ -57,7 +57,7 @@ class TestGenericTableGeo:
 
     def test_as_geofile_gpkg(self, db, tmp_path):
         view = GenericTableGeo(TABLE, SCHEMA, db.engine, geometry_field="geom", srid=4326)
-        data = db.session.query(view.tableDef).all()
+        data = db.session.execute(sa.select(view.tableDef)).all()
         with pytest.warns(DeprecationWarning):
             view.as_geofile(
                 "gpkg", view.db_cols, data=data, dir_path=str(tmp_path), file_name="out"
@@ -119,7 +119,12 @@ class TestGenericQueryGeo:
     def test_get_model(self, db):
         model = GenericQueryGeo(db, TABLE, SCHEMA, geometry_field="geom").get_model()
         assert model.__mapper__.primary_key[0].key == "id"
-        assert {o.name for o in db.session.query(model)} == {"point", "line", "polygon", "no geom"}
+        assert {o.name for o in db.session.scalars(sa.select(model))} == {
+            "point",
+            "line",
+            "polygon",
+            "no geom",
+        }
 
     def test_get_model_explicit_pk(self, db):
         model = GenericQueryGeo(db, TABLE, SCHEMA).get_model(pk_name="name")
@@ -139,7 +144,7 @@ class TestGenericQueryGeo:
             db, TABLE, SCHEMA, geometry_field="geom"
         ).get_marshmallow_schema()
         assert issubclass(schema_class, GeoAlchemyAutoSchema)
-        obj = db.session.query(schema_class.Meta.model).filter_by(id=1).one()
+        obj = db.session.get(schema_class.Meta.model, 1)
         assert schema_class().dump(obj) == {"id": 1, "name": "point", "value": 10}
         assert schema_class(as_geojson=True).dump(obj)["geometry"] == {
             "type": "Point",
